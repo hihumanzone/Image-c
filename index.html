@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Advanced Document Scanner</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #f0f4f8;
+            --text-color: #333;
+            --border-color: #ddd;
+            --background-color: #ffffff;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--background-color);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        header h1 {
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        #main-app h2 {
+            color: #555;
+            margin-top: 2.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+        .file-label {
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .file-label:hover { background-color: #0056b3; }
+        #file-input { display: none; }
+        .canvas-wrapper, .preview-wrapper {
+            position: relative;
+            border: 2px dashed var(--border-color);
+            background-color: #f9f9f9;
+            padding: 5px;
+            max-width: 100%;
+            margin: 0 auto;
+            touch-action: none;
+        }
+        #canvas {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            cursor: crosshair;
+        }
+        #preview-image {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 0 auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f9f9fa;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+        .controls h3 {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: #555;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+        .controls button {
+            padding: 10px 15px;
+            border: 1px solid #ccc;
+            background-color: white;
+            color: var(--text-color);
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: all 0.2s;
+        }
+        .controls button:hover { background-color: #e9ecef; border-color: #aaa; }
+        .controls button:active { background-color: #dde2e6; }
+        .action-button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .action-button:hover { background-color: #218838; }
+        .download-button {
+            text-decoration: none;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        #quality-slider {
+            width: 100%;
+            margin-top: 5px;
+        }
+        .hidden { display: none !important; }
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        .spinner {
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid var(--primary-color);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+        }
+        #loader p {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: var(--primary-color);
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <script async src="https://docs.opencv.org/4.9.0/opencv.js" id="opencv-script"></script>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Advanced Document Scanner</h1>
+            <p>A non-destructive, web-based tool to crop and enhance your documents.</p>
+        </header>
+
+        <div id="main-app">
+            <div class="uploader-section">
+                <label for="file-input" class="file-label">1. Upload Image</label>
+                <input type="file" id="file-input" accept="image/*">
+            </div>
+
+            <div id="editor-container" class="hidden">
+                <h2>2. Adjust Crop Area</h2>
+                <div class="canvas-wrapper"><canvas id="canvas"></canvas></div>
+                <button id="crop-button" class="action-button">Apply Crop & Preview Below »</button>
+            </div>
+
+            <div id="enhancement-container" class="hidden">
+                <h2>3. Enhance & Download</h2>
+                <div class="preview-wrapper"><img id="preview-image" alt="Cropped Document Preview"></div>
+                <div class="controls">
+                    <h3>Enhancements</h3>
+                    <button id="enhance-button">B&W Document</button>
+                    <button id="grayscale-button">Grayscale</button>
+                    <button id="original-color-button">Original Color</button>
+                </div>
+                <div class="controls">
+                    <h3>Download Options</h3>
+                    <label for="quality-slider">JPEG Quality: <span id="quality-value">92</span>%</label>
+                    <input type="range" id="quality-slider" min="10" max="100" value="92" step="1">
+                    <a id="download-link" class="action-button download-button">Download Image</a>
+                </div>
+            </div>
+        </div>
+
+        <div id="loader"><div class="spinner"></div><p>Loading OpenCV & Processing...</p></div>
+    </div>
+    
+    <script>
+        let cvReady = false;
+        let cropper;
+        let originalCroppedMat;
+        let processedMat;
+
+        const ui = {
+            fileInput: document.getElementById('file-input'),
+            editorContainer: document.getElementById('editor-container'),
+            enhancementContainer: document.getElementById('enhancement-container'),
+            canvas: document.getElementById('canvas'),
+            ctx: document.getElementById('canvas').getContext('2d'),
+            cropButton: document.getElementById('crop-button'),
+            previewImage: document.getElementById('preview-image'),
+            enhanceButton: document.getElementById('enhance-button'),
+            grayscaleButton: document.getElementById('grayscale-button'),
+            originalColorButton: document.getElementById('original-color-button'),
+            qualitySlider: document.getElementById('quality-slider'),
+            qualityValue: document.getElementById('quality-value'),
+            downloadLink: document.getElementById('download-link'),
+            loader: document.getElementById('loader'),
+            opencvScript: document.getElementById('opencv-script')
+        };
+
+        const loader = {
+            show: (text) => {
+                ui.loader.querySelector('p').textContent = text || 'Processing...';
+                ui.loader.classList.remove('hidden');
+            },
+            hide: () => ui.loader.classList.add('hidden')
+        };
+        
+        ui.opencvScript.onload = () => {
+            if (cv.onRuntimeInitialized) {
+                cv.onRuntimeInitialized = () => { cvReady = true; loader.hide(); };
+            } else {
+                cvReady = true; loader.hide();
+            }
+        };
+
+        class PerspectiveCropper {
+            constructor(canvas, ctx, image) {
+                Object.assign(this, { canvas, ctx, image });
+                this.handles = [];
+                this.handleRadius = 12;
+                this.handleHitRadius = 30;
+                this.isDragging = false;
+                this.draggedHandleIndex = null;
+                this.init();
+            }
+
+            init() {
+                this.setCanvasSize();
+                this.initHandles();
+                this.addEventListeners();
+                this.draw();
+            }
+
+            setCanvasSize() {
+                const scale = (ui.editorContainer.clientWidth - 10) / this.image.width;
+                this.canvas.width = this.image.width;
+                this.canvas.height = this.image.height;
+                this.canvas.style.width = `${this.image.width * scale}px`;
+                this.canvas.style.height = `${this.image.height * scale}px`;
+            }
+
+            initHandles() {
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                this.handles = [{ x: 0, y: 0 }, { x: w - 1, y: 0 }, { x: w - 1, y: h - 1 }, { x: 0, y: h - 1 }];
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.handles[0].x, this.handles[0].y);
+                this.handles.slice(1).forEach(h => this.ctx.lineTo(h.x, h.y));
+                this.ctx.closePath();
+                this.ctx.fillStyle = 'rgba(0, 123, 255, 0.3)';
+                this.ctx.strokeStyle = 'rgba(0, 123, 255, 1)';
+                this.ctx.lineWidth = 2;
+                this.ctx.fill();
+                this.ctx.stroke();
+
+                this.handles.forEach(h => {
+                    this.ctx.beginPath();
+                    this.ctx.arc(h.x, h.y, this.handleRadius, 0, 2 * Math.PI);
+                    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                    this.ctx.strokeStyle = 'rgba(0, 123, 255, 1)';
+                    this.ctx.lineWidth = 3;
+                    this.ctx.fill();
+                    this.ctx.stroke();
+                });
+            }
+
+            getHandleAt(pos) {
+                for (let i = 0; i < this.handles.length; i++) {
+                    if (Math.hypot(this.handles[i].x - pos.x, this.handles[i].y - pos.y) <= this.handleHitRadius) return i;
+                }
+                return null;
+            }
+
+            getEventPosition(event) {
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const clientX = event.touches ? event.touches[0].clientX : event.clientX;
+                const clientY = event.touches ? event.touches[0].clientY : event.clientY;
+                return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+            }
+
+            addEventListeners() {
+                const events = ['mousedown', 'mousemove', 'mouseup', 'mouseleave', 'touchstart', 'touchmove', 'touchend', 'touchcancel'];
+                const handlerMap = {
+                    start: this.onDragStart.bind(this),
+                    move: this.onDragMove.bind(this),
+                    end: this.onDragEnd.bind(this)
+                };
+                events.forEach(e => {
+                    if (e.includes('start')) this.canvas.addEventListener(e, handlerMap.start);
+                    if (e.includes('move')) this.canvas.addEventListener(e, handlerMap.move);
+                    if (e.includes('end') || e.includes('up') || e.includes('leave') || e.includes('cancel')) this.canvas.addEventListener(e, handlerMap.end);
+                });
+            }
+
+            onDragStart(e) {
+                if (e.cancelable) e.preventDefault();
+                const pos = this.getEventPosition(e);
+                const handleIndex = this.getHandleAt(pos);
+                if (handleIndex !== null) {
+                    this.isDragging = true;
+                    this.draggedHandleIndex = handleIndex;
+                }
+            }
+
+            onDragMove(e) {
+                if (e.cancelable) e.preventDefault();
+                if (!this.isDragging) return;
+                const pos = this.getEventPosition(e);
+                this.handles[this.draggedHandleIndex].x = Math.max(0, Math.min(pos.x, this.canvas.width - 1));
+                this.handles[this.draggedHandleIndex].y = Math.max(0, Math.min(pos.y, this.canvas.height - 1));
+                this.draw();
+            }
+
+            onDragEnd() { this.isDragging = false; }
+            getCornerPoints() { return this.handles.map(h => [h.x, h.y]).flat(); }
+        }
+
+        function loadImage(file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    ui.editorContainer.classList.remove('hidden');
+                    ui.enhancementContainer.classList.add('hidden');
+                    cropper = new PerspectiveCropper(ui.canvas, ui.ctx, img);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function applyCrop() {
+            if (!cvReady || !cropper) return;
+            loader.show('Applying crop...');
+            
+            setTimeout(() => {
+                try {
+                    const srcMat = cv.imread(cropper.image);
+                    const [tl, tr, br, bl] = cropper.handles;
+                    const width = Math.max(Math.hypot(br.x - bl.x, br.y - bl.y), Math.hypot(tr.x - tl.x, tr.y - tl.y));
+                    const height = Math.max(Math.hypot(tr.x - br.x, tr.y - br.y), Math.hypot(tl.x - bl.x, tl.y - bl.y));
+                    
+                    const srcCorners = cv.matFromArray(4, 1, cv.CV_32FC2, cropper.getCornerPoints());
+                    const destCorners = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, width - 1, 0, width - 1, height - 1, 0, height - 1]);
+                    
+                    const M = cv.getPerspectiveTransform(srcCorners, destCorners);
+                    const dsize = new cv.Size(width, height);
+                    
+                    if (originalCroppedMat) originalCroppedMat.delete();
+                    originalCroppedMat = new cv.Mat();
+                    cv.warpPerspective(srcMat, originalCroppedMat, M, dsize, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+                    
+                    updatePreview(originalCroppedMat);
+                    ui.enhancementContainer.classList.remove('hidden');
+                    
+                    [srcMat, srcCorners, destCorners, M].forEach(m => m.delete());
+                } catch (error) { console.error(error); alert("An error occurred during processing."); } 
+                finally { loader.hide(); }
+            }, 50);
+        }
+
+        function updatePreview(mat) {
+            if (processedMat) processedMat.delete();
+            processedMat = mat.clone();
+            const tempCanvas = document.createElement('canvas');
+            cv.imshow(tempCanvas, mat);
+            const quality = parseFloat(ui.qualitySlider.value) / 100;
+            const dataUrl = tempCanvas.toDataURL('image/jpeg', quality);
+            ui.previewImage.src = dataUrl;
+            ui.downloadLink.href = dataUrl;
+        }
+
+        function enhanceBAndW() {
+            if (!originalCroppedMat) { alert("Please apply a crop first!"); return; }
+            loader.show('Applying B&W enhancement...');
+
+            setTimeout(() => {
+                let tempMat = new cv.Mat(), gray = new cv.Mat(), blurred = new cv.Mat(), enhanced = new cv.Mat();
+                try {
+                    cv.cvtColor(originalCroppedMat, gray, cv.COLOR_RGBA2GRAY, 0);
+                    const inputMat = cv.mean(gray)[0] < 120 ? (cv.bitwise_not(originalCroppedMat, tempMat), tempMat) : originalCroppedMat;
+                    
+                    cv.cvtColor(inputMat, gray, cv.COLOR_RGBA2GRAY, 0);
+                    cv.bilateralFilter(gray, blurred, 9, 75, 75, cv.BORDER_DEFAULT);
+                    cv.adaptiveThreshold(blurred, enhanced, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 15, 8);
+                    
+                    updatePreview(enhanced);
+                } catch (err) { console.error("Error during enhancement: ", err); } 
+                finally { [tempMat, gray, blurred].forEach(m => m.delete()); loader.hide(); }
+            }, 50);
+        }
+
+        function enhanceGrayscale() {
+            if (!originalCroppedMat) { alert("Please apply a crop first!"); return; }
+            const gray = new cv.Mat();
+            cv.cvtColor(originalCroppedMat, gray, cv.COLOR_RGBA2GRAY, 0);
+            cv.cvtColor(gray, gray, cv.COLOR_GRAY2RGBA);
+            updatePreview(gray);
+        }
+
+        ui.fileInput.addEventListener('change', (e) => loadImage(e.target.files[0]));
+        ui.cropButton.addEventListener('click', applyCrop);
+        ui.enhanceButton.addEventListener('click', enhanceBAndW);
+        ui.grayscaleButton.addEventListener('click', enhanceGrayscale);
+        ui.originalColorButton.addEventListener('click', () => originalCroppedMat && updatePreview(originalCroppedMat));
+        
+        ui.qualitySlider.addEventListener('input', (e) => {
+            ui.qualityValue.textContent = e.target.value;
+            if (processedMat) updatePreview(processedMat);
+        });
+
+        ui.downloadLink.addEventListener('click', (e) => {
+            if (!processedMat) {
+                e.preventDefault();
+                alert("Please process an image first.");
+            } else {
+                ui.downloadLink.download = `scanned-document-${Date.now()}.jpg`;
+            }
+        });
+
+        loader.show('Loading OpenCV...');
+    </script>
+</body>
+</html>
