@@ -770,6 +770,8 @@
                     this.cropAreaStartPos = pos;
                 }
             }
+
+            moveHandle(pos) {
                 const clampedX = Math.max(0, Math.min(pos.x, this.canvas.width - 1));
                 const clampedY = Math.max(0, Math.min(pos.y, this.canvas.height - 1));
                 
