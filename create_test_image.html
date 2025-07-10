@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Test Image</title>
+</head>
+<body>
+    <canvas id="canvas" width="400" height="300"></canvas>
+    <br>
+    <a id="download" download="test_document.png">Download Test Image</a>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Create a test document
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, 400, 300);
+        
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(20, 20, 360, 260);
+        
+        ctx.fillStyle = 'black';
+        ctx.font = '20px Arial';
+        ctx.fillText('Test Document', 50, 50);
+        ctx.font = '16px Arial';
+        ctx.fillText('This is a sample document', 50, 80);
+        ctx.fillText('for testing the scanner', 50, 110);
+        ctx.fillText('functionality without OpenCV', 50, 140);
+        
+        // Add some perspective distortion by drawing a tilted rectangle
+        ctx.strokeStyle = 'blue';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(30, 180);
+        ctx.lineTo(370, 170);
+        ctx.lineTo(360, 250);
+        ctx.lineTo(40, 260);
+        ctx.closePath();
+        ctx.stroke();
+        
+        // Convert to download link
+        const dataURL = canvas.toDataURL('image/png');
+        document.getElementById('download').href = dataURL;
+    </script>
+</body>
+</html>
