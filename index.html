@@ -182,6 +182,11 @@
 
             <div id="editor-container" class="hidden">
                 <h2>2. Adjust Crop Area</h2>
+                <div class="controls">
+                    <label>
+                        <input type="checkbox" id="rectangular-mode-toggle"> Rectangular crop mode
+                    </label>
+                </div>
                 <div class="canvas-wrapper"><canvas id="canvas"></canvas></div>
                 <button id="crop-button" class="action-button">Apply Crop & Preview Below »</button>
             </div>
@@ -220,6 +225,7 @@
             canvas: document.getElementById('canvas'),
             ctx: document.getElementById('canvas').getContext('2d'),
             cropButton: document.getElementById('crop-button'),
+            rectangularModeToggle: document.getElementById('rectangular-mode-toggle'),
             previewImage: document.getElementById('preview-image'),
             enhanceButton: document.getElementById('enhance-button'),
             grayscaleButton: document.getElementById('grayscale-button'),
@@ -534,8 +540,12 @@
                 this.handles = [];
                 this.handleRadius = 12;
                 this.handleHitRadius = 30;
+                this.sideHitRadius = 15;
                 this.isDragging = false;
                 this.draggedHandleIndex = null;
+                this.draggedSideIndex = null;
+                this.isDraggingSide = false;
+                this.isRectangularMode = false;
                 this.init();
             }
 
@@ -544,6 +554,43 @@
                 this.initHandles();
                 this.addEventListeners();
                 this.draw();
+            }
+
+            setRectangularMode(enabled) {
+                this.isRectangularMode = enabled;
+                if (enabled) {
+                    this.makeRectangular();
+                }
+                this.draw();
+            }
+
+            makeRectangular() {
+                // Convert current quadrilateral to rectangle
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                // Calculate center point
+                const centerX = this.handles.reduce((sum, h) => sum + h.x, 0) / 4;
+                const centerY = this.handles.reduce((sum, h) => sum + h.y, 0) / 4;
+                
+                // Calculate average width and height
+                const avgWidth = Math.max(
+                    Math.abs(this.handles[1].x - this.handles[0].x),
+                    Math.abs(this.handles[2].x - this.handles[3].x)
+                );
+                const avgHeight = Math.max(
+                    Math.abs(this.handles[2].y - this.handles[1].y),
+                    Math.abs(this.handles[3].y - this.handles[0].y)
+                );
+                
+                // Create rectangle centered on current selection
+                const halfWidth = Math.min(avgWidth / 2, w / 2);
+                const halfHeight = Math.min(avgHeight / 2, h / 2);
+                
+                this.handles[0] = { x: Math.max(0, centerX - halfWidth), y: Math.max(0, centerY - halfHeight) };
+                this.handles[1] = { x: Math.min(w - 1, centerX + halfWidth), y: Math.max(0, centerY - halfHeight) };
+                this.handles[2] = { x: Math.min(w - 1, centerX + halfWidth), y: Math.min(h - 1, centerY + halfHeight) };
+                this.handles[3] = { x: Math.max(0, centerX - halfWidth), y: Math.min(h - 1, centerY + halfHeight) };
             }
 
             setCanvasSize() {
@@ -591,6 +638,59 @@
                 return null;
             }
 
+            getSideAt(pos) {
+                const sides = [
+                    [this.handles[0], this.handles[1]], // top
+                    [this.handles[1], this.handles[2]], // right
+                    [this.handles[2], this.handles[3]], // bottom
+                    [this.handles[3], this.handles[0]]  // left
+                ];
+
+                for (let i = 0; i < sides.length; i++) {
+                    const [p1, p2] = sides[i];
+                    const distance = this.pointToLineDistance(pos, p1, p2);
+                    
+                    if (distance <= this.sideHitRadius) {
+                        // Check if point is between the endpoints
+                        const minX = Math.min(p1.x, p2.x) - this.sideHitRadius;
+                        const maxX = Math.max(p1.x, p2.x) + this.sideHitRadius;
+                        const minY = Math.min(p1.y, p2.y) - this.sideHitRadius;
+                        const maxY = Math.max(p1.y, p2.y) + this.sideHitRadius;
+                        
+                        if (pos.x >= minX && pos.x <= maxX && pos.y >= minY && pos.y <= maxY) {
+                            return i;
+                        }
+                    }
+                }
+                return null;
+            }
+
+            pointToLineDistance(point, lineStart, lineEnd) {
+                const A = point.x - lineStart.x;
+                const B = point.y - lineStart.y;
+                const C = lineEnd.x - lineStart.x;
+                const D = lineEnd.y - lineStart.y;
+
+                const dot = A * C + B * D;
+                const lenSq = C * C + D * D;
+                let param = -1;
+                if (lenSq !== 0) param = dot / lenSq;
+
+                let xx, yy;
+                if (param < 0) {
+                    xx = lineStart.x;
+                    yy = lineStart.y;
+                } else if (param > 1) {
+                    xx = lineEnd.x;
+                    yy = lineEnd.y;
+                } else {
+                    xx = lineStart.x + param * C;
+                    yy = lineStart.y + param * D;
+                }
+
+                return Math.hypot(point.x - xx, point.y - yy);
+            }
+
             getEventPosition(event) {
                 const rect = this.canvas.getBoundingClientRect();
                 const scaleX = this.canvas.width / rect.width;
@@ -617,23 +717,146 @@
             onDragStart(e) {
                 if (e.cancelable) e.preventDefault();
                 const pos = this.getEventPosition(e);
+                
+                // First check for handle hit
                 const handleIndex = this.getHandleAt(pos);
                 if (handleIndex !== null) {
                     this.isDragging = true;
                     this.draggedHandleIndex = handleIndex;
+                    this.isDraggingSide = false;
+                    return;
+                }
+                
+                // Then check for side hit
+                const sideIndex = this.getSideAt(pos);
+                if (sideIndex !== null) {
+                    this.isDragging = true;
+                    this.isDraggingSide = true;
+                    this.draggedSideIndex = sideIndex;
+                    this.sideStartPos = pos;
                 }
             }
 
             onDragMove(e) {
                 if (e.cancelable) e.preventDefault();
                 if (!this.isDragging) return;
+                
                 const pos = this.getEventPosition(e);
-                this.handles[this.draggedHandleIndex].x = Math.max(0, Math.min(pos.x, this.canvas.width - 1));
-                this.handles[this.draggedHandleIndex].y = Math.max(0, Math.min(pos.y, this.canvas.height - 1));
+                
+                if (this.isDraggingSide) {
+                    this.moveSide(pos);
+                } else {
+                    this.moveHandle(pos);
+                }
+                
                 this.draw();
             }
 
-            onDragEnd() { this.isDragging = false; }
+            moveHandle(pos) {
+                const clampedX = Math.max(0, Math.min(pos.x, this.canvas.width - 1));
+                const clampedY = Math.max(0, Math.min(pos.y, this.canvas.height - 1));
+                
+                if (this.isRectangularMode) {
+                    this.moveHandleRectangular(clampedX, clampedY);
+                } else {
+                    this.handles[this.draggedHandleIndex].x = clampedX;
+                    this.handles[this.draggedHandleIndex].y = clampedY;
+                }
+            }
+
+            moveHandleRectangular(x, y) {
+                const handleIndex = this.draggedHandleIndex;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                // In rectangular mode, moving one corner affects others to maintain rectangle
+                if (handleIndex === 0) { // top-left
+                    this.handles[0] = { x, y };
+                    this.handles[1].y = y; // top-right shares y
+                    this.handles[3].x = x; // bottom-left shares x
+                } else if (handleIndex === 1) { // top-right
+                    this.handles[1] = { x, y };
+                    this.handles[0].y = y; // top-left shares y
+                    this.handles[2].x = x; // bottom-right shares x
+                } else if (handleIndex === 2) { // bottom-right
+                    this.handles[2] = { x, y };
+                    this.handles[1].x = x; // top-right shares x
+                    this.handles[3].y = y; // bottom-left shares y
+                } else if (handleIndex === 3) { // bottom-left
+                    this.handles[3] = { x, y };
+                    this.handles[0].x = x; // top-left shares x
+                    this.handles[2].y = y; // bottom-right shares y
+                }
+                
+                // Ensure all handles stay within bounds
+                this.handles.forEach(handle => {
+                    handle.x = Math.max(0, Math.min(handle.x, w - 1));
+                    handle.y = Math.max(0, Math.min(handle.y, h - 1));
+                });
+            }
+
+            moveSide(pos) {
+                const deltaX = pos.x - this.sideStartPos.x;
+                const deltaY = pos.y - this.sideStartPos.y;
+                
+                if (this.isRectangularMode) {
+                    this.moveSideRectangular(deltaX, deltaY);
+                } else {
+                    this.moveSidePerspective(deltaX, deltaY);
+                }
+                
+                this.sideStartPos = pos;
+            }
+
+            moveSidePerspective(deltaX, deltaY) {
+                const sideIndex = this.draggedSideIndex;
+                const sides = [
+                    [0, 1], // top: handles 0,1
+                    [1, 2], // right: handles 1,2  
+                    [2, 3], // bottom: handles 2,3
+                    [3, 0]  // left: handles 3,0
+                ];
+                
+                const [h1, h2] = sides[sideIndex];
+                
+                // Move both handles of the side
+                this.handles[h1].x = Math.max(0, Math.min(this.handles[h1].x + deltaX, this.canvas.width - 1));
+                this.handles[h1].y = Math.max(0, Math.min(this.handles[h1].y + deltaY, this.canvas.height - 1));
+                this.handles[h2].x = Math.max(0, Math.min(this.handles[h2].x + deltaX, this.canvas.width - 1));
+                this.handles[h2].y = Math.max(0, Math.min(this.handles[h2].y + deltaY, this.canvas.height - 1));
+            }
+
+            moveSideRectangular(deltaX, deltaY) {
+                const sideIndex = this.draggedSideIndex;
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                
+                if (sideIndex === 0) { // top side
+                    const newY = Math.max(0, Math.min(this.handles[0].y + deltaY, this.handles[2].y - 10));
+                    this.handles[0].y = newY;
+                    this.handles[1].y = newY;
+                } else if (sideIndex === 1) { // right side
+                    const newX = Math.max(this.handles[0].x + 10, Math.min(this.handles[1].x + deltaX, w - 1));
+                    this.handles[1].x = newX;
+                    this.handles[2].x = newX;
+                } else if (sideIndex === 2) { // bottom side
+                    const newY = Math.max(this.handles[0].y + 10, Math.min(this.handles[2].y + deltaY, h - 1));
+                    this.handles[2].y = newY;
+                    this.handles[3].y = newY;
+                } else if (sideIndex === 3) { // left side
+                    const newX = Math.max(0, Math.min(this.handles[0].x + deltaX, this.handles[1].x - 10));
+                    this.handles[0].x = newX;
+                    this.handles[3].x = newX;
+                }
+            }
+
+            onDragEnd() { 
+                this.isDragging = false; 
+                this.isDraggingSide = false;
+                this.draggedHandleIndex = null;
+                this.draggedSideIndex = null;
+            }
+            
             getCornerPoints() { return this.handles.map(h => [h.x, h.y]).flat(); }
         }
 
@@ -645,6 +868,9 @@
                     ui.editorContainer.classList.remove('hidden');
                     ui.enhancementContainer.classList.add('hidden');
                     cropper = new PerspectiveCropper(ui.canvas, ui.ctx, img);
+                    
+                    // Reset toggle to default (off)
+                    ui.rectangularModeToggle.checked = false;
                 };
                 img.src = e.target.result;
             };
@@ -731,6 +957,11 @@
 
         ui.fileInput.addEventListener('change', (e) => loadImage(e.target.files[0]));
         ui.cropButton.addEventListener('click', applyCrop);
+        ui.rectangularModeToggle.addEventListener('change', (e) => {
+            if (cropper) {
+                cropper.setRectangularMode(e.target.checked);
+            }
+        });
         ui.enhanceButton.addEventListener('click', enhanceBAndW);
         ui.grayscaleButton.addEventListener('click', enhanceGrayscale);
         ui.originalColorButton.addEventListener('click', () => originalCroppedCanvas && updatePreview(originalCroppedCanvas));
