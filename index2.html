@@ -249,7 +249,10 @@
 
         setTimeout(() => loader.hide(), 100);
 
-        let imageWorker;
+        // This is where the ImageProcessor class should be defined.
+        class ImageProcessor {
+            static createCanvas(width, height) {
+                const canvas = document.createElement('canvas');
                 canvas.width = width;
                 canvas.height = height;
                 return canvas;
@@ -281,11 +284,6 @@
                 const destImageData = destCtx.createImageData(destWidth, destHeight);
 
                 const [x0, y0, x1, y1, x2, y2, x3, y3] = corners;
-
-                // const dx0 = 0, dy0 = 0; // These variables were not used
-                // const dx1 = destWidth - 1, dy1 = 0;
-                // const dx2 = destWidth - 1, dy2 = destHeight - 1;
-                // const dx3 = 0, dy3 = destHeight - 1;
 
                 const dwMinus1 = destWidth - 1;
                 const dhMinus1 = destHeight - 1;
@@ -320,17 +318,16 @@
                 const height = imageData.height;
                 const data = imageData.data;
 
-                // Clamp coordinates to image bounds
                 const xClamped = Math.max(0, Math.min(x, width - 1));
                 const yClamped = Math.max(0, Math.min(y, height - 1));
 
                 const x0 = Math.floor(xClamped);
                 const y0 = Math.floor(yClamped);
-                const x1 = Math.min(x0 + 1, width - 1); // Ensure x1 is within bounds
-                const y1 = Math.min(y0 + 1, height - 1); // Ensure y1 is within bounds
+                const x1 = Math.min(x0 + 1, width - 1);
+                const y1 = Math.min(y0 + 1, height - 1);
 
-                const dx = xClamped - x0; // Fractional part
-                const dy = yClamped - y0; // Fractional part
+                const dx = xClamped - x0;
+                const dy = yClamped - y0;
 
                 const oneMinusDx = 1 - dx;
                 const oneMinusDy = 1 - dy;
@@ -385,11 +382,11 @@
                 const width = canvas.width;
                 const height = canvas.height;
 
-                const resultData = new Uint8ClampedArray(data.length); // Renamed for clarity
+                const resultData = new Uint8ClampedArray(data.length);
                 const radius = Math.floor(d / 2);
 
-                const twoSigmaSpaceSq = 2 * sigmaSpace * sigmaSpace; // Cache this
-                const twoSigmaColorSq = 2 * sigmaColor * sigmaColor; // Cache this
+                const twoSigmaSpaceSq = 2 * sigmaSpace * sigmaSpace;
+                const twoSigmaColorSq = 2 * sigmaColor * sigmaColor;
 
                 for (let y = 0; y < height; y++) {
                     for (let x = 0; x < width; x++) {
@@ -412,10 +409,10 @@
                                     const neighborG = data[neighborIndex + 1];
                                     const neighborB = data[neighborIndex + 2];
 
-                                    const spatialDistSq = dx * dx + dy * dy; // Use squared distance
+                                    const spatialDistSq = dx * dx + dy * dy;
                                     const spatialWeight = Math.exp(-spatialDistSq / twoSigmaSpaceSq);
 
-                                    const colorDistSq = // Use squared distance
+                                    const colorDistSq =
                                         (centerR - neighborR) * (centerR - neighborR) +
                                         (centerG - neighborG) * (centerG - neighborG) +
                                         (centerB - neighborB) * (centerB - neighborB);
@@ -430,7 +427,6 @@
                                 }
                             }
                         }
-                        // Handle totalWeight = 0 case to avoid NaN, though unlikely with positive weights
                         if (totalWeight === 0) {
                             resultData[centerIndex]     = centerR;
                             resultData[centerIndex + 1] = centerG;
@@ -440,7 +436,7 @@
                             resultData[centerIndex + 1] = sumG / totalWeight;
                             resultData[centerIndex + 2] = sumB / totalWeight;
                         }
-                        resultData[centerIndex + 3] = data[centerIndex + 3]; // Preserve alpha
+                        resultData[centerIndex + 3] = data[centerIndex + 3];
                     }
                 }
 
