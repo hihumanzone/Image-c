@@ -11,7 +11,23 @@
             --text-color: #333;
             --border-color: #ddd;
             --background-color: #ffffff;
+
+            /* Dark theme colors */
+            --dark-primary-color: #0d8eff; /* A slightly brighter blue for dark mode */
+            --dark-secondary-color: #1a1a1a; /* Very dark gray for backgrounds */
+            --dark-text-color: #e0e0e0; /* Light gray for text */
+            --dark-border-color: #444; /* Darker border color */
+            --dark-background-color: #2c2c2c; /* Dark gray for main content background */
         }
+
+        .dark-theme {
+            --primary-color: var(--dark-primary-color);
+            --secondary-color: var(--dark-secondary-color);
+            --text-color: var(--dark-text-color);
+            --border-color: var(--dark-border-color);
+            --background-color: var(--dark-background-color);
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
@@ -63,11 +79,14 @@
         .canvas-wrapper, .preview-wrapper {
             position: relative;
             border: 2px dashed var(--border-color);
-            background-color: #f9f9f9;
+            background-color: #f9f9f9; /* Light mode background */
             padding: 5px;
             max-width: 100%;
             margin: 0 auto;
             touch-action: none;
+        }
+        .dark-theme .canvas-wrapper, .dark-theme .preview-wrapper {
+            background-color: #222; /* Dark mode background for canvas/preview */
         }
         #canvas {
             display: block;
@@ -85,9 +104,12 @@
         .controls {
             margin-top: 20px;
             padding: 15px;
-            background: #f9f9fa;
+            background: #f9f9fa; /* Light mode background */
             border-radius: 5px;
             border: 1px solid var(--border-color);
+        }
+        .dark-theme .controls {
+            background: #3a3a3a; /* Dark mode background for controls */
         }
         .controls h3 {
             margin-top: 0;
@@ -98,16 +120,24 @@
         }
         .controls button {
             padding: 10px 15px;
-            border: 1px solid #ccc;
-            background-color: white;
-            color: var(--text-color);
+            border: 1px solid #ccc; /* Light mode border */
+            background-color: white; /* Light mode background */
+            color: var(--text-color); /* Uses theme variable */
             border-radius: 5px;
             cursor: pointer;
             margin-right: 10px;
             transition: all 0.2s;
         }
+        .dark-theme .controls button {
+            background-color: #555; /* Dark mode button background */
+            border-color: #777; /* Dark mode button border */
+            color: var(--dark-text-color); /* Ensure text color is light */
+        }
         .controls button:hover { background-color: #e9ecef; border-color: #aaa; }
+        .dark-theme .controls button:hover { background-color: #666; border-color: #888; }
         .controls button:active { background-color: #dde2e6; }
+        .dark-theme .controls button:active { background-color: #444; }
+
         .action-button {
             display: block;
             width: 100%;
@@ -139,25 +169,32 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
+            background-color: rgba(255, 255, 255, 0.8); /* Light mode loader background */
             display: flex;
             justify-content: center;
             align-items: center;
             flex-direction: column;
             z-index: 1000;
         }
+        .dark-theme #loader {
+            background-color: rgba(0, 0, 0, 0.8); /* Dark mode loader background */
+        }
         .spinner {
-            border: 8px solid #f3f3f3;
-            border-top: 8px solid var(--primary-color);
+            border: 8px solid #f3f3f3; /* Light mode spinner base */
+            border-top: 8px solid var(--primary-color); /* Uses theme variable */
             border-radius: 50%;
             width: 60px;
             height: 60px;
             animation: spin 1s linear infinite;
         }
+        .dark-theme .spinner {
+            border: 8px solid #555; /* Dark mode spinner base */
+             /* border-top will use the themed --primary-color */
+        }
         #loader p {
             margin-top: 20px;
             font-size: 1.2em;
-            color: var(--primary-color);
+            color: var(--primary-color); /* Uses theme variable */
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -172,6 +209,7 @@
         <header>
             <h1>Advanced Document Scanner</h1>
             <p>A non-destructive, web-based tool to crop and enhance your documents.</p>
+            <button id="theme-toggle-button" style="position: absolute; top: 20px; right: 20px; padding: 8px 12px; background-color: var(--primary-color); color: var(--background-color); border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer;">Toggle Theme</button>
         </header>
 
         <div id="main-app">
@@ -1081,6 +1119,35 @@
                 ui.downloadLink.download = `scanned-document-${Date.now()}.jpg`;
             }
         });
+
+        // Theme toggle functionality
+        const themeToggleButton = document.getElementById('theme-toggle-button');
+        themeToggleButton.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            // Save theme preference
+            if (document.body.classList.contains('dark-theme')) {
+                localStorage.setItem('theme', 'dark');
+            } else {
+                localStorage.setItem('theme', 'light');
+            }
+            // Update button colors after toggling
+            themeToggleButton.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+            themeToggleButton.style.color = getComputedStyle(document.documentElement).getPropertyValue('--background-color').trim();
+            themeToggleButton.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim();
+        });
+
+        // Apply saved theme on load
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-theme');
+            }
+            // Ensure the button color updates if the theme is already applied
+            themeToggleButton.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+            themeToggleButton.style.color = getComputedStyle(document.documentElement).getPropertyValue('--background-color').trim();
+
+        });
+
 
         loader.show('Initializing...');
 
