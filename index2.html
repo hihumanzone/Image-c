@@ -249,7 +249,6 @@
 
         setTimeout(() => loader.hide(), 100);
 
-        // This is where the ImageProcessor class should be defined.
         class ImageProcessor {
             static createCanvas(width, height) {
                 const canvas = document.createElement('canvas');
@@ -1124,21 +1123,15 @@
             }
         } else {
             console.warn("Web Workers or OffscreenCanvas not supported. Image processing will run on the main thread.");
-            // UI could inform user that processing might be slower.
-            // For this refactor, we will proceed assuming main thread if worker is not available,
-            // by calling ImageProcessor methods directly.
         }
 
-        async function postTaskToWorker(taskName, workerPayload) { // Renamed for clarity
+        async function postTaskToWorker(taskName, workerPayload) {
             if (!imageWorker) {
                 console.error("Image worker is not available.");
-                // Optionally, disable UI elements that depend on the worker
                 return Promise.reject(new Error("Image worker not available."));
             }
 
             const id = workerTaskCounter++;
-            // The worker expects an 'imageBitmap' field in the data for tasks that process images.
-            // The actual ImageBitmap object should be in the transfer list.
             const transferList = workerPayload.imageBitmap ? [workerPayload.imageBitmap] : [];
 
             return new Promise((resolve, reject) => {
@@ -1150,5 +1143,3 @@
     </script>
 </body>
 </html>
-
-[end of index.html]
