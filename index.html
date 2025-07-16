@@ -12,12 +12,11 @@
             --border-color: #ddd;
             --background-color: #ffffff;
 
-            /* Dark theme colors */
-            --dark-primary-color: #0d8eff; /* A slightly brighter blue for dark mode */
-            --dark-secondary-color: #1a1a1a; /* Very dark gray for backgrounds */
-            --dark-text-color: #e0e0e0; /* Light gray for text */
-            --dark-border-color: #444; /* Darker border color */
-            --dark-background-color: #2c2c2c; /* Dark gray for main content background */
+            --dark-primary-color: #0d8eff;
+            --dark-secondary-color: #1a1a1a;
+            --dark-text-color: #e0e0e0;
+            --dark-border-color: #444;
+            --dark-background-color: #2c2c2c;
         }
 
         .dark-theme {
@@ -79,14 +78,14 @@
         .canvas-wrapper, .preview-wrapper {
             position: relative;
             border: 2px dashed var(--border-color);
-            background-color: #f9f9f9; /* Light mode background */
+            background-color: #f9f9f9;
             padding: 5px;
             max-width: 100%;
             margin: 0 auto;
             touch-action: none;
         }
         .dark-theme .canvas-wrapper, .dark-theme .preview-wrapper {
-            background-color: #222; /* Dark mode background for canvas/preview */
+            background-color: #222;
         }
         #canvas {
             display: block;
@@ -104,12 +103,12 @@
         .controls {
             margin-top: 20px;
             padding: 15px;
-            background: #f9f9fa; /* Light mode background */
+            background: #f9f9fa;
             border-radius: 5px;
             border: 1px solid var(--border-color);
         }
         .dark-theme .controls {
-            background: #3a3a3a; /* Dark mode background for controls */
+            background: #3a3a3a;
         }
         .controls h3 {
             margin-top: 0;
@@ -120,18 +119,18 @@
         }
         .controls button {
             padding: 10px 15px;
-            border: 1px solid #ccc; /* Light mode border */
-            background-color: white; /* Light mode background */
-            color: var(--text-color); /* Uses theme variable */
+            border: 1px solid #ccc;
+            background-color: white;
+            color: var(--text-color);
             border-radius: 5px;
             cursor: pointer;
             margin-right: 10px;
             transition: all 0.2s;
         }
         .dark-theme .controls button {
-            background-color: #555; /* Dark mode button background */
-            border-color: #777; /* Dark mode button border */
-            color: var(--dark-text-color); /* Ensure text color is light */
+            background-color: #555;
+            border-color: #777;
+            color: var(--dark-text-color);
         }
         .controls button:hover { background-color: #e9ecef; border-color: #aaa; }
         .dark-theme .controls button:hover { background-color: #666; border-color: #888; }
@@ -169,7 +168,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(255, 255, 255, 0.8); /* Light mode loader background */
+            background-color: rgba(255, 255, 255, 0.8);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -177,24 +176,23 @@
             z-index: 1000;
         }
         .dark-theme #loader {
-            background-color: rgba(0, 0, 0, 0.8); /* Dark mode loader background */
+            background-color: rgba(0, 0, 0, 0.8);
         }
         .spinner {
-            border: 8px solid #f3f3f3; /* Light mode spinner base */
-            border-top: 8px solid var(--primary-color); /* Uses theme variable */
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid var(--primary-color);
             border-radius: 50%;
             width: 60px;
             height: 60px;
             animation: spin 1s linear infinite;
         }
         .dark-theme .spinner {
-            border: 8px solid #555; /* Dark mode spinner base */
-             /* border-top will use the themed --primary-color */
+            border: 8px solid #555;
         }
         #loader p {
             margin-top: 20px;
             font-size: 1.2em;
-            color: var(--primary-color); /* Uses theme variable */
+            color: var(--primary-color);
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -259,35 +257,90 @@
 
         const MAX_PREVIEW_DIMENSION = 1000;
 
-        const ui = {
-            fileInput: document.getElementById('file-input'),
-            editorContainer: document.getElementById('editor-container'),
-            enhancementContainer: document.getElementById('enhancement-container'),
-            canvas: document.getElementById('canvas'),
-            ctx: document.getElementById('canvas').getContext('2d'),
-            cropButton: document.getElementById('crop-button'),
-            rectangularModeToggle: document.getElementById('rectangular-mode-toggle'),
-            previewImage: document.getElementById('preview-image'),
-            enhanceButton: document.getElementById('enhance-button'),
-            grayscaleButton: document.getElementById('grayscale-button'),
-            originalColorButton: document.getElementById('original-color-button'),
-            qualitySlider: document.getElementById('quality-slider'),
-            qualityValue: document.getElementById('quality-value'),
-            downloadLink: document.getElementById('download-link'),
-            loader: document.getElementById('loader')
-        };
+        class UIManager {
+            constructor() {
+                this.uploader = new Uploader();
+                this.editor = new Editor();
+                this.enhancer = new Enhancer();
+            }
+        }
+
+        class Uploader {
+            constructor() {
+                this.fileInput = document.getElementById('file-input');
+            }
+        }
+
+        class Editor {
+            constructor() {
+                this.container = document.getElementById('editor-container');
+                this.canvas = document.getElementById('canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.cropButton = document.getElementById('crop-button');
+                this.rectangularModeToggle = document.getElementById('rectangular-mode-toggle');
+            }
+        }
+
+        class Enhancer {
+            constructor() {
+                this.container = document.getElementById('enhancement-container');
+                this.previewImage = document.getElementById('preview-image');
+                this.enhanceButton = document.getElementById('enhance-button');
+                this.grayscaleButton = document.getElementById('grayscale-button');
+                this.originalColorButton = document.getElementById('original-color-button');
+                this.qualitySlider = document.getElementById('quality-slider');
+                this.qualityValue = document.getElementById('quality-value');
+                this.downloadLink = document.getElementById('download-link');
+            }
+        }
 
         const loader = {
             show: (text) => {
-                ui.loader.querySelector('p').textContent = text || 'Processing...';
-                ui.loader.classList.remove('hidden');
+                document.getElementById('loader').querySelector('p').textContent = text || 'Processing...';
+                document.getElementById('loader').classList.remove('hidden');
             },
-            hide: () => ui.loader.classList.add('hidden')
+            hide: () => document.getElementById('loader').classList.add('hidden')
         };
+
+        const uiManager = new UIManager();
 
         setTimeout(() => loader.hide(), 100);
 
         class ImageProcessor {
+            static loadImage(file, maxWidth, maxHeight) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        const image = new Image();
+                        image.onload = () => {
+                            let width = image.width;
+                            let height = image.height;
+
+                            if (width > maxWidth || height > maxHeight) {
+                                if (width > height) {
+                                    const ratio = width / maxWidth;
+                                    width = maxWidth;
+                                    height = Math.round(height / ratio);
+                                } else {
+                                    const ratio = height / maxHeight;
+                                    height = maxHeight;
+                                    width = Math.round(width / ratio);
+                                }
+                            }
+
+                            const canvas = this.createCanvas(width, height);
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(image, 0, 0, width, height);
+                            resolve(canvas);
+                        };
+                        image.onerror = reject;
+                        image.src = e.target.result;
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+
             static createCanvas(width, height) {
                 const canvas = document.createElement('canvas');
                 canvas.width = width;
@@ -589,17 +642,10 @@
                 this.init();
             }
 
-            updateCanvasCache() {
-                this.canvasRect = this.canvas.getBoundingClientRect();
-                this.canvasScaleX = this.canvas.width / this.canvasRect.width;
-                this.canvasScaleY = this.canvas.height / this.canvasRect.height;
-            }
-
             init() {
                 this.setCanvasSize();
                 this.initHandles();
                 this.addEventListeners();
-                setTimeout(() => this.updateCanvasCache(), 0);
                 this.draw();
             }
 
@@ -637,7 +683,7 @@
             }
 
             setCanvasSize() {
-                const scale = (ui.editorContainer.clientWidth - 10) / this.image.width;
+                const scale = (uiManager.editor.container.clientWidth - 10) / this.image.width;
                 this.canvas.width = this.image.width;
                 this.canvas.height = this.image.height;
                 this.canvas.style.width = `${this.image.width * scale}px`;
@@ -747,14 +793,14 @@
             }
 
             getEventPosition(event) {
-                if (!this.canvasRect) {
-                    this.updateCanvasCache();
-                }
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
                 const clientX = event.touches ? event.touches[0].clientX : event.clientX;
                 const clientY = event.touches ? event.touches[0].clientY : event.clientY;
                 return {
-                    x: (clientX - this.canvasRect.left) * this.canvasScaleX,
-                    y: (clientY - this.canvasRect.top) * this.canvasScaleY
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
                 };
             }
 
@@ -952,61 +998,28 @@
             getCornerPoints() { return this.handles.map(h => [h.x, h.y]).flat(); }
         }
 
-        function loadImage(file) {
+        async function loadImage(file) {
             loader.show('Loading image...');
-            const reader = new FileReader();
-            reader.onload = e => {
-                originalImage = new Image();
-                originalImage.onload = () => {
-                    loader.show('Preparing editor...');
-                    let previewWidth = originalImage.width;
-                    let previewHeight = originalImage.height;
-                    let scaleFactor = 1;
-
-                    if (previewWidth > MAX_PREVIEW_DIMENSION || previewHeight > MAX_PREVIEW_DIMENSION) {
-                        if (previewWidth > previewHeight) {
-                            scaleFactor = MAX_PREVIEW_DIMENSION / previewWidth;
-                            previewHeight = Math.round(previewHeight * scaleFactor);
-                            previewWidth = MAX_PREVIEW_DIMENSION;
-                        } else {
-                            scaleFactor = MAX_PREVIEW_DIMENSION / previewHeight;
-                            previewWidth = Math.round(previewWidth * scaleFactor);
-                            previewHeight = MAX_PREVIEW_DIMENSION;
-                        }
-                    }
-
-                    const previewCanvas = document.createElement('canvas');
-                    previewCanvas.width = previewWidth;
-                    previewCanvas.height = previewHeight;
-                    const previewCtx = previewCanvas.getContext('2d');
-                    previewCtx.drawImage(originalImage, 0, 0, previewWidth, previewHeight);
-
-                    const previewImage = new Image();
-                    previewImage.onload = () => {
-                        ui.editorContainer.classList.remove('hidden');
-                        ui.enhancementContainer.classList.add('hidden');
-                        cropper = new PerspectiveCropper(ui.canvas, ui.ctx, previewImage, originalImage);
-                        ui.rectangularModeToggle.checked = false;
-                        loader.hide();
-                    };
-                    previewImage.onerror = () => {
-                        loader.hide();
-                        alert("Error creating image preview.");
-                    };
-                    previewImage.src = previewCanvas.toDataURL();
-
-                };
-                originalImage.onerror = () => {
+            try {
+                const canvas = await ImageProcessor.loadImage(file, MAX_PREVIEW_DIMENSION, MAX_PREVIEW_DIMENSION);
+                const previewImage = new Image();
+                previewImage.onload = () => {
+                    uiManager.editor.container.classList.remove('hidden');
+                    uiManager.enhancer.container.classList.add('hidden');
+                    originalImage = previewImage;
+                    cropper = new PerspectiveCropper(uiManager.editor.canvas, uiManager.editor.ctx, previewImage, previewImage);
+                    uiManager.editor.rectangularModeToggle.checked = false;
                     loader.hide();
-                    alert("Error loading image file.");
                 };
-                originalImage.src = e.target.result;
-            };
-            reader.onerror = () => {
+                previewImage.onerror = () => {
+                    loader.hide();
+                    alert("Error creating image preview.");
+                };
+                previewImage.src = canvas.toDataURL();
+            } catch (error) {
                 loader.hide();
-                alert("Error reading file.");
-            };
-            reader.readAsDataURL(file);
+                alert("Error loading image file.");
+            }
         }
 
         async function applyCrop() {
@@ -1037,7 +1050,7 @@
                 });
 
                 updatePreview(originalCroppedCanvas);
-                ui.enhancementContainer.classList.remove('hidden');
+                uiManager.enhancer.container.classList.remove('hidden');
 
             } catch (error) {
                 console.error("Error during applyCrop:", error);
@@ -1055,10 +1068,10 @@
             const ctx = processedCanvas.getContext('2d');
             ctx.drawImage(canvas, 0, 0);
 
-            const quality = parseFloat(ui.qualitySlider.value) / 100;
+            const quality = parseFloat(uiManager.enhancer.qualitySlider.value) / 100;
             const dataUrl = processedCanvas.toDataURL('image/jpeg', quality);
-            ui.previewImage.src = dataUrl;
-            ui.downloadLink.href = dataUrl;
+            uiManager.enhancer.previewImage.src = dataUrl;
+            uiManager.enhancer.downloadLink.href = dataUrl;
         }
 
         function enhanceBAndW() {
@@ -1095,65 +1108,71 @@
             updatePreview(grayCanvas);
         }
 
-        ui.fileInput.addEventListener('change', (e) => loadImage(e.target.files[0]));
-        ui.cropButton.addEventListener('click', applyCrop);
-        ui.rectangularModeToggle.addEventListener('change', (e) => {
+        uiManager.uploader.fileInput.addEventListener('change', (e) => loadImage(e.target.files[0]));
+        uiManager.editor.cropButton.addEventListener('click', applyCrop);
+        uiManager.editor.rectangularModeToggle.addEventListener('change', (e) => {
             if (cropper) {
                 cropper.setRectangularMode(e.target.checked);
             }
         });
-        ui.enhanceButton.addEventListener('click', enhanceBAndW);
-        ui.grayscaleButton.addEventListener('click', enhanceGrayscale);
-        ui.originalColorButton.addEventListener('click', () => originalCroppedCanvas && updatePreview(originalCroppedCanvas));
+        uiManager.enhancer.enhanceButton.addEventListener('click', enhanceBAndW);
+        uiManager.enhancer.grayscaleButton.addEventListener('click', enhanceGrayscale);
+        uiManager.enhancer.originalColorButton.addEventListener('click', () => originalCroppedCanvas && updatePreview(originalCroppedCanvas));
 
-        ui.qualitySlider.addEventListener('input', (e) => {
-            ui.qualityValue.textContent = e.target.value;
+        uiManager.enhancer.qualitySlider.addEventListener('input', (e) => {
+            uiManager.enhancer.qualityValue.textContent = e.target.value;
             if (processedCanvas) updatePreview(processedCanvas);
         });
 
-        ui.downloadLink.addEventListener('click', (e) => {
+        uiManager.enhancer.downloadLink.addEventListener('click', (e) => {
             if (!processedCanvas) {
                 e.preventDefault();
                 alert("Please process an image first.");
             } else {
-                ui.downloadLink.download = `scanned-document-${Date.now()}.jpg`;
+                uiManager.enhancer.downloadLink.download = `scanned-document-${Date.now()}.jpg`;
             }
         });
 
-        // Theme toggle functionality
-        const themeToggleButton = document.getElementById('theme-toggle-button');
-        themeToggleButton.addEventListener('click', () => {
-            document.body.classList.toggle('dark-theme');
-            // Save theme preference
-            if (document.body.classList.contains('dark-theme')) {
-                localStorage.setItem('theme', 'dark');
-            } else {
-                localStorage.setItem('theme', 'light');
+        class ThemeManager {
+            constructor() {
+                this.themeToggleButton = document.getElementById('theme-toggle-button');
+                this.init();
             }
-            // Update button colors after toggling
-            themeToggleButton.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
-            themeToggleButton.style.color = getComputedStyle(document.documentElement).getPropertyValue('--background-color').trim();
-            themeToggleButton.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim();
-        });
 
-        // Apply saved theme on load
-        document.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
-                document.body.classList.add('dark-theme');
+            init() {
+                this.themeToggleButton.addEventListener('click', () => this.toggleTheme());
+                document.addEventListener('DOMContentLoaded', () => this.applySavedTheme());
             }
-            // Ensure the button color updates if the theme is already applied
-            themeToggleButton.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
-            themeToggleButton.style.color = getComputedStyle(document.documentElement).getPropertyValue('--background-color').trim();
 
-        });
+            toggleTheme() {
+                document.body.classList.toggle('dark-theme');
+                const theme = document.body.classList.contains('dark-theme') ? 'dark' : 'light';
+                localStorage.setItem('theme', theme);
+                this.updateButtonColors();
+            }
+
+            applySavedTheme() {
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme !== 'light') {
+                    document.body.classList.add('dark-theme');
+                }
+                this.updateButtonColors();
+            }
+
+            updateButtonColors() {
+                this.themeToggleButton.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
+                this.themeToggleButton.style.color = getComputedStyle(document.documentElement).getPropertyValue('--background-color').trim();
+                this.themeToggleButton.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim();
+            }
+        }
+
+        new ThemeManager();
 
 
         loader.show('Initializing...');
 
         setTimeout(() => loader.hide(), 100);
 
-        // --- Web Worker Setup ---
         let imageWorker;
         let workerTaskCounter = 0;
         const workerPromises = new Map();
