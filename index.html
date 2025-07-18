@@ -226,6 +226,12 @@
                         <input type="checkbox" id="rectangular-mode-toggle"> Rectangular crop mode
                     </label>
                 </div>
+                 <div class="controls">
+                    <label for="pre-rotation-slider" style="display: block; margin-bottom: 5px;">
+                        Fine-tune Image Rotation: <span id="pre-rotation-value">0</span>°
+                    </label>
+                    <input type="range" id="pre-rotation-slider" min="-45" max="45" value="0" step="1" style="width: 100%;">
+                </div>
                 <div class="canvas-wrapper"><canvas id="canvas"></canvas></div>
                 <button id="crop-button" class="action-button">Apply Crop & Preview Below »</button>
             </div>
@@ -270,8 +276,9 @@
         let currentEnhancedCanvas;
         let processedCanvas;
 
-        let currentFineRotation = 0;
-        let currentCoarseRotation = 0;
+        let preCropFineRotation = 0;
+        let postCropFineRotation = 0;
+        let postCropCoarseRotation = 0;
 
         const MAX_PREVIEW_DIMENSION = 1000;
 
@@ -293,6 +300,8 @@
             loader: document.getElementById('loader'),
             preRotateLeftButton: document.getElementById('pre-rotate-left-button'),
             preRotateRightButton: document.getElementById('pre-rotate-right-button'),
+            preRotationSlider: document.getElementById('pre-rotation-slider'),
+            preRotationValue: document.getElementById('pre-rotation-value'),
             rotateLeftButton: document.getElementById('rotate-left-button'),
             rotateRightButton: document.getElementById('rotate-right-button'),
             rotationSlider: document.getElementById('rotation-slider'),
@@ -318,6 +327,10 @@
             }
             
             static rotate(source, degrees) {
+                if(degrees % 360 === 0) {
+                     return source.tagName === 'CANVAS' ? source : this.imageToCanvas(source);
+                }
+
                 const sourceCanvas = source.tagName === 'CANVAS' ? source : this.imageToCanvas(source);
                 const radians = degrees * Math.PI / 180;
                 const sin = Math.abs(Math.sin(radians));
@@ -693,7 +706,13 @@
 
             draw() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                this.ctx.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
+                
+                this.ctx.save();
+                this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
+                this.ctx.rotate(preCropFineRotation * Math.PI / 180);
+                this.ctx.drawImage(this.image, -this.canvas.width / 2, -this.canvas.height / 2, this.canvas.width, this.canvas.height);
+                this.ctx.restore();
+
                 this.ctx.beginPath();
                 this.ctx.moveTo(this.handles[0].x, this.handles[0].y);
                 this.handles.slice(1).forEach(h => this.ctx.lineTo(h.x, h.y));
@@ -1011,6 +1030,11 @@
             previewImage.onload = () => {
                 ui.editorContainer.classList.remove('hidden');
                 ui.enhancementContainer.classList.add('hidden');
+                
+                preCropFineRotation = 0;
+                ui.preRotationSlider.value = 0;
+                ui.preRotationValue.textContent = '0';
+                
                 cropper = new PerspectiveCropper(ui.canvas, ui.ctx, previewImage, originalImage);
                 ui.rectangularModeToggle.checked = false;
                 loader.hide();
@@ -1047,11 +1071,12 @@
             loader.show('Applying crop...');
 
             try {
-                const imageSource = cropper.originalImage;
-                const imageBitmap = await createImageBitmap(imageSource);
+                const rotatedSourceImage = ImageProcessor.rotate(cropper.originalImage, preCropFineRotation);
 
-                const scaleX = imageSource.width / cropper.image.width;
-                const scaleY = imageSource.height / cropper.image.height;
+                const imageBitmap = await createImageBitmap(rotatedSourceImage);
+
+                const scaleX = rotatedSourceImage.width / cropper.image.width;
+                const scaleY = rotatedSourceImage.height / cropper.image.height;
 
                 const scaledHandles = cropper.handles.map(h => ({ x: h.x * scaleX, y: h.y * scaleY }));
                 const [sTl, sTr, sBr, sBl] = scaledHandles;
@@ -1069,8 +1094,8 @@
                 });
 
                 currentEnhancedCanvas = originalCroppedCanvas;
-                currentFineRotation = 0;
-                currentCoarseRotation = 0;
+                postCropFineRotation = 0;
+                postCropCoarseRotation = 0;
                 ui.rotationSlider.value = 0;
                 ui.rotationValue.textContent = '0';
                 ui.previewImage.style.transform = '';
@@ -1088,13 +1113,13 @@
         
         function renderFinalPreview() {
             if (!currentEnhancedCanvas) return;
-            processedCanvas = ImageProcessor.rotate(currentEnhancedCanvas, currentCoarseRotation);
+            processedCanvas = ImageProcessor.rotate(currentEnhancedCanvas, postCropCoarseRotation);
             
             const quality = parseFloat(ui.qualitySlider.value) / 100;
             const dataUrl = processedCanvas.toDataURL('image/jpeg', quality);
             ui.previewImage.src = dataUrl;
 
-            ui.previewImage.style.transform = `rotate(${currentFineRotation}deg)`;
+            ui.previewImage.style.transform = `rotate(${postCropFineRotation}deg)`;
         }
 
         function enhanceBAndW() {
@@ -1136,6 +1161,13 @@
 
         ui.preRotateLeftButton.addEventListener('click', () => rotateEditorImage(-90));
         ui.preRotateRightButton.addEventListener('click', () => rotateEditorImage(90));
+        ui.preRotationSlider.addEventListener('input', (e) => {
+            preCropFineRotation = parseInt(e.target.value, 10);
+            ui.preRotationValue.textContent = preCropFineRotation;
+            if (cropper) {
+                cropper.draw();
+            }
+        });
 
         ui.enhanceButton.addEventListener('click', enhanceBAndW);
         ui.grayscaleButton.addEventListener('click', enhanceGrayscale);
@@ -1146,17 +1178,17 @@
         });
 
         ui.rotateLeftButton.addEventListener('click', () => {
-            currentCoarseRotation = (currentCoarseRotation - 90) % 360;
+            postCropCoarseRotation = (postCropCoarseRotation - 90) % 360;
             renderFinalPreview();
         });
         ui.rotateRightButton.addEventListener('click', () => {
-            currentCoarseRotation = (currentCoarseRotation + 90) % 360;
+            postCropCoarseRotation = (postCropCoarseRotation + 90) % 360;
             renderFinalPreview();
         });
         ui.rotationSlider.addEventListener('input', (e) => {
-            currentFineRotation = parseInt(e.target.value, 10);
-            ui.rotationValue.textContent = currentFineRotation;
-            ui.previewImage.style.transform = `rotate(${currentFineRotation}deg)`;
+            postCropFineRotation = parseInt(e.target.value, 10);
+            ui.rotationValue.textContent = postCropFineRotation;
+            ui.previewImage.style.transform = `rotate(${postCropFineRotation}deg)`;
         });
 
         ui.qualitySlider.addEventListener('input', (e) => {
@@ -1169,11 +1201,13 @@
                 alert("Please process an image first.");
                 return;
             }
-            
-            const finalDownloadCanvas = ImageProcessor.rotate(processedCanvas, currentFineRotation);
+            const finalRotation = postCropFineRotation;
+            const finalCanvas = (finalRotation !== 0) 
+                ? ImageProcessor.rotate(processedCanvas, finalRotation) 
+                : processedCanvas;
             
             const quality = parseFloat(ui.qualitySlider.value) / 100;
-            ui.downloadLink.href = finalDownloadCanvas.toDataURL('image/jpeg', quality);
+            ui.downloadLink.href = finalCanvas.toDataURL('image/jpeg', quality);
             ui.downloadLink.download = `scanned-document-${Date.now()}.jpg`;
         });
 
