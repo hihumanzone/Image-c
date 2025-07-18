@@ -11,13 +11,11 @@
             --text-color: #333;
             --border-color: #ddd;
             --background-color: #ffffff;
-
-            /* Dark theme colors */
-            --dark-primary-color: #0d8eff; /* A slightly brighter blue for dark mode */
-            --dark-secondary-color: #1a1a1a; /* Very dark gray for backgrounds */
-            --dark-text-color: #e0e0e0; /* Light gray for text */
-            --dark-border-color: #444; /* Darker border color */
-            --dark-background-color: #2c2c2c; /* Dark gray for main content background */
+            --dark-primary-color: #0d8eff;
+            --dark-secondary-color: #1a1a1a;
+            --dark-text-color: #e0e0e0;
+            --dark-border-color: #444;
+            --dark-background-color: #2c2c2c;
         }
 
         .dark-theme {
@@ -79,14 +77,14 @@
         .canvas-wrapper, .preview-wrapper {
             position: relative;
             border: 2px dashed var(--border-color);
-            background-color: #f9f9f9; /* Light mode background */
+            background-color: #f9f9f9;
             padding: 5px;
             max-width: 100%;
             margin: 0 auto;
             touch-action: none;
         }
         .dark-theme .canvas-wrapper, .dark-theme .preview-wrapper {
-            background-color: #222; /* Dark mode background for canvas/preview */
+            background-color: #222;
         }
         #canvas {
             display: block;
@@ -104,12 +102,12 @@
         .controls {
             margin-top: 20px;
             padding: 15px;
-            background: #f9f9fa; /* Light mode background */
+            background: #f9f9fa;
             border-radius: 5px;
             border: 1px solid var(--border-color);
         }
         .dark-theme .controls {
-            background: #3a3a3a; /* Dark mode background for controls */
+            background: #3a3a3a;
         }
         .controls h3 {
             margin-top: 0;
@@ -120,18 +118,18 @@
         }
         .controls button {
             padding: 10px 15px;
-            border: 1px solid #ccc; /* Light mode border */
-            background-color: white; /* Light mode background */
-            color: var(--text-color); /* Uses theme variable */
+            border: 1px solid #ccc;
+            background-color: white;
+            color: var(--text-color);
             border-radius: 5px;
             cursor: pointer;
             margin-right: 10px;
             transition: all 0.2s;
         }
         .dark-theme .controls button {
-            background-color: #555; /* Dark mode button background */
-            border-color: #777; /* Dark mode button border */
-            color: var(--dark-text-color); /* Ensure text color is light */
+            background-color: #555;
+            border-color: #777;
+            color: var(--dark-text-color);
         }
         .controls button:hover { background-color: #e9ecef; border-color: #aaa; }
         .dark-theme .controls button:hover { background-color: #666; border-color: #888; }
@@ -169,7 +167,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(255, 255, 255, 0.8); /* Light mode loader background */
+            background-color: rgba(255, 255, 255, 0.8);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -177,24 +175,23 @@
             z-index: 1000;
         }
         .dark-theme #loader {
-            background-color: rgba(0, 0, 0, 0.8); /* Dark mode loader background */
+            background-color: rgba(0, 0, 0, 0.8);
         }
         .spinner {
-            border: 8px solid #f3f3f3; /* Light mode spinner base */
-            border-top: 8px solid var(--primary-color); /* Uses theme variable */
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid var(--primary-color);
             border-radius: 50%;
             width: 60px;
             height: 60px;
             animation: spin 1s linear infinite;
         }
         .dark-theme .spinner {
-            border: 8px solid #555; /* Dark mode spinner base */
-             /* border-top will use the themed --primary-color */
+            border: 8px solid #555;
         }
         #loader p {
             margin-top: 20px;
             font-size: 1.2em;
-            color: var(--primary-color); /* Uses theme variable */
+            color: var(--primary-color);
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -232,6 +229,17 @@
             <div id="enhancement-container" class="hidden">
                 <h2>3. Enhance & Download</h2>
                 <div class="preview-wrapper"><img id="preview-image" alt="Cropped Document Preview"></div>
+                
+                <div class="controls">
+                    <h3>Rotation</h3>
+                    <button id="rotate-left-button" title="Rotate 90° Counter-Clockwise">Rotate 90° Left</button>
+                    <button id="rotate-right-button" title="Rotate 90° Clockwise">Rotate 90° Right</button>
+                    <label for="rotation-slider" style="display: block; margin-top: 15px; margin-bottom: 5px;">
+                        Fine-tune Rotation: <span id="rotation-value">0</span>°
+                    </label>
+                    <input type="range" id="rotation-slider" min="-45" max="45" value="0" step="1" style="width: 100%;">
+                </div>
+
                 <div class="controls">
                     <h3>Enhancements</h3>
                     <button id="enhance-button">B&W Document</button>
@@ -255,7 +263,11 @@
         let cropper;
         let originalImage = null;
         let originalCroppedCanvas;
+        let currentEnhancedCanvas;
         let processedCanvas;
+
+        let currentRotation = 0;
+        let currentCoarseRotation = 0;
 
         const MAX_PREVIEW_DIMENSION = 1000;
 
@@ -274,7 +286,11 @@
             qualitySlider: document.getElementById('quality-slider'),
             qualityValue: document.getElementById('quality-value'),
             downloadLink: document.getElementById('download-link'),
-            loader: document.getElementById('loader')
+            loader: document.getElementById('loader'),
+            rotateLeftButton: document.getElementById('rotate-left-button'),
+            rotateRightButton: document.getElementById('rotate-right-button'),
+            rotationSlider: document.getElementById('rotation-slider'),
+            rotationValue: document.getElementById('rotation-value'),
         };
 
         const loader = {
@@ -293,6 +309,24 @@
                 canvas.width = width;
                 canvas.height = height;
                 return canvas;
+            }
+
+            static rotate(sourceCanvas, degrees) {
+                const radians = degrees * Math.PI / 180;
+                const sin = Math.abs(Math.sin(radians));
+                const cos = Math.abs(Math.cos(radians));
+
+                const newWidth = Math.floor(sourceCanvas.width * cos + sourceCanvas.height * sin);
+                const newHeight = Math.floor(sourceCanvas.width * sin + sourceCanvas.height * cos);
+
+                const rotatedCanvas = this.createCanvas(newWidth, newHeight);
+                const ctx = rotatedCanvas.getContext('2d');
+
+                ctx.translate(newWidth / 2, newHeight / 2);
+                ctx.rotate(radians);
+                ctx.drawImage(sourceCanvas, -sourceCanvas.width / 2, -sourceCanvas.height / 2);
+
+                return rotatedCanvas;
             }
 
             static getImageData(canvas) {
@@ -1036,6 +1070,12 @@
                     destHeight: destHeight
                 });
 
+                currentEnhancedCanvas = originalCroppedCanvas;
+                currentRotation = 0;
+                currentCoarseRotation = 0;
+                ui.rotationSlider.value = 0;
+                ui.rotationValue.textContent = '0';
+
                 updatePreview(originalCroppedCanvas);
                 ui.enhancementContainer.classList.remove('hidden');
 
@@ -1049,16 +1089,18 @@
 
         function updatePreview(canvas) {
             if (processedCanvas) processedCanvas = null;
-            processedCanvas = document.createElement('canvas');
-            processedCanvas.width = canvas.width;
-            processedCanvas.height = canvas.height;
-            const ctx = processedCanvas.getContext('2d');
-            ctx.drawImage(canvas, 0, 0);
+            processedCanvas = canvas;
 
             const quality = parseFloat(ui.qualitySlider.value) / 100;
             const dataUrl = processedCanvas.toDataURL('image/jpeg', quality);
             ui.previewImage.src = dataUrl;
             ui.downloadLink.href = dataUrl;
+        }
+
+        function applyRotation() {
+            if (!currentEnhancedCanvas) return;
+            const finalCanvas = ImageProcessor.rotate(currentEnhancedCanvas, currentCoarseRotation + currentRotation);
+            updatePreview(finalCanvas);
         }
 
         function enhanceBAndW() {
@@ -1073,16 +1115,16 @@
                     if (meanBrightness < 120) {
                         workingCanvas = ImageProcessor.invert(workingCanvas);
                     }
-
                     const grayCanvas = ImageProcessor.toGrayscale(workingCanvas);
-
                     const blurredCanvas = ImageProcessor.bilateralFilter(grayCanvas, 9, 75, 75);
-
                     const enhancedCanvas = ImageProcessor.adaptiveThreshold(blurredCanvas, 15, 8);
+                    
+                    currentEnhancedCanvas = enhancedCanvas;
+                    applyRotation();
 
-                    updatePreview(enhancedCanvas);
                 } catch (err) {
                     console.error("Error during enhancement: ", err);
+                    alert('An error occurred during B&W enhancement.');
                 } finally {
                     loader.hide();
                 }
@@ -1091,20 +1133,37 @@
 
         function enhanceGrayscale() {
             if (!originalCroppedCanvas) { alert("Please apply a crop first!"); return; }
-            const grayCanvas = ImageProcessor.toGrayscale(originalCroppedCanvas);
-            updatePreview(grayCanvas);
+            currentEnhancedCanvas = ImageProcessor.toGrayscale(originalCroppedCanvas);
+            applyRotation();
         }
 
         ui.fileInput.addEventListener('change', (e) => loadImage(e.target.files[0]));
         ui.cropButton.addEventListener('click', applyCrop);
         ui.rectangularModeToggle.addEventListener('change', (e) => {
-            if (cropper) {
-                cropper.setRectangularMode(e.target.checked);
-            }
+            if (cropper) cropper.setRectangularMode(e.target.checked);
         });
+
         ui.enhanceButton.addEventListener('click', enhanceBAndW);
         ui.grayscaleButton.addEventListener('click', enhanceGrayscale);
-        ui.originalColorButton.addEventListener('click', () => originalCroppedCanvas && updatePreview(originalCroppedCanvas));
+        ui.originalColorButton.addEventListener('click', () => {
+            if (!originalCroppedCanvas) return;
+            currentEnhancedCanvas = originalCroppedCanvas;
+            applyRotation();
+        });
+
+        ui.rotateLeftButton.addEventListener('click', () => {
+            currentCoarseRotation = (currentCoarseRotation - 90) % 360;
+            applyRotation();
+        });
+        ui.rotateRightButton.addEventListener('click', () => {
+            currentCoarseRotation = (currentCoarseRotation + 90) % 360;
+            applyRotation();
+        });
+        ui.rotationSlider.addEventListener('input', (e) => {
+            currentRotation = parseInt(e.target.value, 10);
+            ui.rotationValue.textContent = currentRotation;
+            applyRotation();
+        });
 
         ui.qualitySlider.addEventListener('input', (e) => {
             ui.qualityValue.textContent = e.target.value;
@@ -1120,47 +1179,35 @@
             }
         });
 
-        // Theme toggle functionality
         const themeToggleButton = document.getElementById('theme-toggle-button');
         themeToggleButton.addEventListener('click', () => {
             document.body.classList.toggle('dark-theme');
-            // Save theme preference
-            if (document.body.classList.contains('dark-theme')) {
-                localStorage.setItem('theme', 'dark');
-            } else {
-                localStorage.setItem('theme', 'light');
-            }
-            // Update button colors after toggling
+            localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
             themeToggleButton.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
             themeToggleButton.style.color = getComputedStyle(document.documentElement).getPropertyValue('--background-color').trim();
             themeToggleButton.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim();
         });
 
-        // Apply saved theme on load
         document.addEventListener('DOMContentLoaded', () => {
             const savedTheme = localStorage.getItem('theme');
             if (savedTheme === 'dark') {
                 document.body.classList.add('dark-theme');
             }
-            // Ensure the button color updates if the theme is already applied
             themeToggleButton.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
             themeToggleButton.style.color = getComputedStyle(document.documentElement).getPropertyValue('--background-color').trim();
 
         });
 
-
         loader.show('Initializing...');
-
         setTimeout(() => loader.hide(), 100);
 
-        // --- Web Worker Setup ---
         let imageWorker;
         let workerTaskCounter = 0;
         const workerPromises = new Map();
 
         if (window.Worker && typeof OffscreenCanvas !== 'undefined') {
             try {
-                imageWorker = new Worker('imageProcessorWorker.js');
+                imageWorker = new Worker('imageProcessorWorker.js'); 
                 imageWorker.onmessage = (event) => {
                     const { id, success, imageData, error, stack } = event.data;
                     if (workerPromises.has(id)) {
