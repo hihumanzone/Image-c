@@ -1,4 +1,3 @@
-
 class ImageProcessor {
     static createCanvas(width, height) {
         return new OffscreenCanvas(width, height);
