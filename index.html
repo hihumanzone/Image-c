@@ -137,6 +137,15 @@
         .controls button:active { background-color: #dde2e6; }
         .dark-theme .controls button:active { background-color: #444; }
 
+        .rotation-slider-container {
+            margin-top: 15px;
+        }
+
+        .rotation-slider-container input[type="range"] {
+             width: 100%;
+             margin-top: 5px;
+        }
+
         .action-button {
             display: block;
             width: 100%;
@@ -219,9 +228,16 @@
             <div id="editor-container" class="hidden">
                 <h2>2. Adjust Crop Area</h2>
                 <div class="controls">
-                    <label>
-                        <input type="checkbox" id="rectangular-mode-toggle"> Rectangular crop mode
-                    </label>
+                    <div>
+                        <label>
+                            <input type="checkbox" id="rectangular-mode-toggle"> Rectangular crop mode
+                        </label>
+                        <button id="rotate-90-button" style="margin-left: 20px;">Rotate 90°</button>
+                    </div>
+                    <div class="rotation-slider-container">
+                        <label for="rotation-slider">Fine-tune Rotation: <span id="rotation-value">0</span>°</label>
+                        <input type="range" id="rotation-slider" min="-20" max="20" value="0" step="0.1">
+                    </div>
                 </div>
                 <div class="canvas-wrapper"><canvas id="canvas"></canvas></div>
                 <button id="crop-button" class="action-button">Apply Crop & Preview Below »</button>
@@ -252,6 +268,9 @@
         let appReady = true;
         let cropper;
         let originalImage = null;
+        let currentPreviewImage = null;
+        let currentFullResImage = null;
+        let fineTuneRotationAngle = 0;
         let originalCroppedCanvas;
         let processedCanvas;
 
@@ -265,6 +284,9 @@
             ctx: document.getElementById('canvas').getContext('2d'),
             cropButton: document.getElementById('crop-button'),
             rectangularModeToggle: document.getElementById('rectangular-mode-toggle'),
+            rotate90Button: document.getElementById('rotate-90-button'),
+            rotationSlider: document.getElementById('rotation-slider'),
+            rotationValue: document.getElementById('rotation-value'),
             previewImage: document.getElementById('preview-image'),
             enhanceButton: document.getElementById('enhance-button'),
             grayscaleButton: document.getElementById('grayscale-button'),
@@ -579,6 +601,7 @@
                 this.isDraggingSide = false;
                 this.isRectangularMode = false;
                 this.isDraggingCropArea = false;
+                this.fineTuneRotation = 0;
 
                 this.canvasRect = null;
                 this.canvasScaleX = 1;
@@ -599,6 +622,10 @@
                 this.addEventListeners();
                 setTimeout(() => this.updateCanvasCache(), 0);
                 this.draw();
+            }
+
+            setFineTuneRotation(angle) {
+                this.fineTuneRotation = angle;
             }
 
             setRectangularMode(enabled) {
@@ -650,7 +677,15 @@
 
             draw() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                this.ctx.drawImage(this.image, 0, 0, this.canvas.width, this.canvas.height);
+                
+                this.ctx.save();
+                const w = this.canvas.width;
+                const h = this.canvas.height;
+                this.ctx.translate(w / 2, h / 2);
+                this.ctx.rotate(this.fineTuneRotation * Math.PI / 180);
+                this.ctx.drawImage(this.image, -w / 2, -h / 2, w, h);
+                this.ctx.restore();
+
                 this.ctx.beginPath();
                 this.ctx.moveTo(this.handles[0].x, this.handles[0].y);
                 this.handles.slice(1).forEach(h => this.ctx.lineTo(h.x, h.y));
@@ -956,6 +991,7 @@
             reader.onload = e => {
                 originalImage = new Image();
                 originalImage.onload = () => {
+                    currentFullResImage = originalImage;
                     loader.show('Preparing editor...');
                     let previewWidth = originalImage.width;
                     let previewHeight = originalImage.height;
@@ -981,10 +1017,14 @@
 
                     const previewImage = new Image();
                     previewImage.onload = () => {
+                        currentPreviewImage = previewImage;
                         ui.editorContainer.classList.remove('hidden');
                         ui.enhancementContainer.classList.add('hidden');
-                        cropper = new PerspectiveCropper(ui.canvas, ui.ctx, previewImage, originalImage);
+                        cropper = new PerspectiveCropper(ui.canvas, ui.ctx, currentPreviewImage, currentFullResImage);
                         ui.rectangularModeToggle.checked = false;
+                        ui.rotationSlider.value = 0;
+                        ui.rotationValue.textContent = '0';
+                        fineTuneRotationAngle = 0;
                         loader.hide();
                     };
                     previewImage.onerror = () => {
@@ -1007,6 +1047,78 @@
             reader.readAsDataURL(file);
         }
 
+        async function createRotatedImage(sourceImage, degrees) {
+            return new Promise((resolve, reject) => {
+                const angleRad = degrees * Math.PI / 180;
+                const w = sourceImage.width;
+                const h = sourceImage.height;
+
+                const newWidth = (degrees % 180 === 0) ? w : h;
+                const newHeight = (degrees % 180 === 0) ? h : w;
+
+                const canvas = ImageProcessor.createCanvas(newWidth, newHeight);
+                const ctx = canvas.getContext('2d');
+
+                ctx.translate(newWidth / 2, newHeight / 2);
+                ctx.rotate(angleRad);
+                ctx.drawImage(sourceImage, -w / 2, -h / 2);
+
+                const rotatedImg = new Image();
+                rotatedImg.onload = () => resolve(rotatedImg);
+                rotatedImg.onerror = reject;
+                rotatedImg.src = canvas.toDataURL();
+            });
+        }
+
+        async function rotateEditorContent() {
+            if (!currentFullResImage || !currentPreviewImage) return;
+            loader.show('Rotating...');
+            try {
+                fineTuneRotationAngle = 0;
+                ui.rotationSlider.value = 0;
+                ui.rotationValue.textContent = '0';
+
+                const [newFullRes, newPreview] = await Promise.all([
+                    createRotatedImage(currentFullResImage, 90),
+                    createRotatedImage(currentPreviewImage, 90)
+                ]);
+
+                currentFullResImage = newFullRes;
+                currentPreviewImage = newPreview;
+
+                cropper = new PerspectiveCropper(ui.canvas, ui.ctx, currentPreviewImage, currentFullResImage);
+                cropper.setFineTuneRotation(0);
+                cropper.setRectangularMode(ui.rectangularModeToggle.checked);
+
+            } catch (err) {
+                console.error("Error rotating image:", err);
+                alert("Could not rotate the image.");
+            } finally {
+                loader.hide();
+            }
+        }
+
+        function rotateCanvas(inputCanvas, degrees) {
+            const rad = degrees * Math.PI / 180;
+            const w = inputCanvas.width;
+            const h = inputCanvas.height;
+
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+
+            const newWidth = Math.round(Math.abs(w * cos) + Math.abs(h * sin));
+            const newHeight = Math.round(Math.abs(w * sin) + Math.abs(h * cos));
+
+            const resultCanvas = ImageProcessor.createCanvas(newWidth, newHeight);
+            const ctx = resultCanvas.getContext('2d');
+
+            ctx.translate(newWidth / 2, newHeight / 2);
+            ctx.rotate(rad);
+            ctx.drawImage(inputCanvas, -w / 2, -h / 2);
+
+            return resultCanvas;
+        }
+
         async function applyCrop() {
             if (!appReady || !cropper) return;
             loader.show('Applying crop...');
@@ -1027,12 +1139,18 @@
 
                 if (originalCroppedCanvas) originalCroppedCanvas = null;
 
-                originalCroppedCanvas = await postTaskToWorker('perspectiveTransform', {
+                let transformedCanvas = await postTaskToWorker('perspectiveTransform', {
                     imageBitmap: imageBitmap,
                     corners: corners,
                     destWidth: destWidth,
                     destHeight: destHeight
                 });
+                
+                if (fineTuneRotationAngle !== 0) {
+                    transformedCanvas = rotateCanvas(transformedCanvas, fineTuneRotationAngle);
+                }
+
+                originalCroppedCanvas = transformedCanvas;
 
                 updatePreview(originalCroppedCanvas);
                 ui.enhancementContainer.classList.remove('hidden');
@@ -1100,6 +1218,17 @@
                 cropper.setRectangularMode(e.target.checked);
             }
         });
+        
+        ui.rotate90Button.addEventListener('click', rotateEditorContent);
+
+        ui.rotationSlider.addEventListener('input', (e) => {
+            if (!cropper) return;
+            fineTuneRotationAngle = parseFloat(e.target.value);
+            ui.rotationValue.textContent = fineTuneRotationAngle.toFixed(1);
+            cropper.setFineTuneRotation(fineTuneRotationAngle);
+            cropper.draw();
+        });
+        
         ui.enhanceButton.addEventListener('click', enhanceBAndW);
         ui.grayscaleButton.addEventListener('click', enhanceGrayscale);
         ui.originalColorButton.addEventListener('click', () => originalCroppedCanvas && updatePreview(originalCroppedCanvas));
