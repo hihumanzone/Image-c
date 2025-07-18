@@ -82,6 +82,7 @@
             max-width: 100%;
             margin: 0 auto;
             touch-action: none;
+            overflow: hidden;
         }
         .dark-theme .canvas-wrapper, .dark-theme .preview-wrapper {
             background-color: #222;
@@ -98,6 +99,7 @@
             height: auto;
             margin: 0 auto;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.15s ease-out;
         }
         .controls {
             margin-top: 20px;
@@ -218,7 +220,9 @@
             <div id="editor-container" class="hidden">
                 <h2>2. Adjust Crop Area</h2>
                 <div class="controls">
-                    <label>
+                    <button id="pre-rotate-left-button" title="Rotate Image 90° Counter-Clockwise">Rotate 90° Left</button>
+                    <button id="pre-rotate-right-button" title="Rotate Image 90° Clockwise">Rotate 90° Right</button>
+                    <label style="margin-left: 20px;">
                         <input type="checkbox" id="rectangular-mode-toggle"> Rectangular crop mode
                     </label>
                 </div>
@@ -235,7 +239,7 @@
                     <button id="rotate-left-button" title="Rotate 90° Counter-Clockwise">Rotate 90° Left</button>
                     <button id="rotate-right-button" title="Rotate 90° Clockwise">Rotate 90° Right</button>
                     <label for="rotation-slider" style="display: block; margin-top: 15px; margin-bottom: 5px;">
-                        Fine-tune Rotation: <span id="rotation-value">0</span>°
+                        Fine-tune Rotation (Preview): <span id="rotation-value">0</span>°
                     </label>
                     <input type="range" id="rotation-slider" min="-45" max="45" value="0" step="1" style="width: 100%;">
                 </div>
@@ -266,7 +270,7 @@
         let currentEnhancedCanvas;
         let processedCanvas;
 
-        let currentRotation = 0;
+        let currentFineRotation = 0;
         let currentCoarseRotation = 0;
 
         const MAX_PREVIEW_DIMENSION = 1000;
@@ -287,6 +291,8 @@
             qualityValue: document.getElementById('quality-value'),
             downloadLink: document.getElementById('download-link'),
             loader: document.getElementById('loader'),
+            preRotateLeftButton: document.getElementById('pre-rotate-left-button'),
+            preRotateRightButton: document.getElementById('pre-rotate-right-button'),
             rotateLeftButton: document.getElementById('rotate-left-button'),
             rotateRightButton: document.getElementById('rotate-right-button'),
             rotationSlider: document.getElementById('rotation-slider'),
@@ -310,8 +316,9 @@
                 canvas.height = height;
                 return canvas;
             }
-
-            static rotate(sourceCanvas, degrees) {
+            
+            static rotate(source, degrees) {
+                const sourceCanvas = source.tagName === 'CANVAS' ? source : this.imageToCanvas(source);
                 const radians = degrees * Math.PI / 180;
                 const sin = Math.abs(Math.sin(radians));
                 const cos = Math.abs(Math.cos(radians));
@@ -986,60 +993,52 @@
             getCornerPoints() { return this.handles.map(h => [h.x, h.y]).flat(); }
         }
 
+        function reinitializeCropper(newFullResImage) {
+            loader.show('Re-initializing editor...');
+            originalImage = newFullResImage;
+
+            let previewWidth = originalImage.width;
+            let previewHeight = originalImage.height;
+            if (previewWidth > MAX_PREVIEW_DIMENSION || previewHeight > MAX_PREVIEW_DIMENSION) {
+                const scale = (previewWidth > previewHeight) ? MAX_PREVIEW_DIMENSION / previewWidth : MAX_PREVIEW_DIMENSION / previewHeight;
+                previewWidth = Math.round(previewWidth * scale);
+                previewHeight = Math.round(previewHeight * scale);
+            }
+            const previewCanvas = ImageProcessor.createCanvas(previewWidth, previewHeight);
+            previewCanvas.getContext('2d').drawImage(originalImage, 0, 0, previewWidth, previewHeight);
+            
+            const previewImage = new Image();
+            previewImage.onload = () => {
+                ui.editorContainer.classList.remove('hidden');
+                ui.enhancementContainer.classList.add('hidden');
+                cropper = new PerspectiveCropper(ui.canvas, ui.ctx, previewImage, originalImage);
+                ui.rectangularModeToggle.checked = false;
+                loader.hide();
+            };
+            previewImage.onerror = () => {
+                loader.hide();
+                alert("Error creating image preview.");
+            };
+            previewImage.src = previewCanvas.toDataURL();
+        }
+
+        async function rotateEditorImage(degrees) {
+            if (!cropper) return;
+            loader.show('Rotating image...');
+            const rotatedFullRes = ImageProcessor.rotate(cropper.originalImage, degrees);
+            reinitializeCropper(rotatedFullRes);
+        }
+
         function loadImage(file) {
             loader.show('Loading image...');
             const reader = new FileReader();
             reader.onload = e => {
-                originalImage = new Image();
-                originalImage.onload = () => {
-                    loader.show('Preparing editor...');
-                    let previewWidth = originalImage.width;
-                    let previewHeight = originalImage.height;
-                    let scaleFactor = 1;
-
-                    if (previewWidth > MAX_PREVIEW_DIMENSION || previewHeight > MAX_PREVIEW_DIMENSION) {
-                        if (previewWidth > previewHeight) {
-                            scaleFactor = MAX_PREVIEW_DIMENSION / previewWidth;
-                            previewHeight = Math.round(previewHeight * scaleFactor);
-                            previewWidth = MAX_PREVIEW_DIMENSION;
-                        } else {
-                            scaleFactor = MAX_PREVIEW_DIMENSION / previewHeight;
-                            previewWidth = Math.round(previewWidth * scaleFactor);
-                            previewHeight = MAX_PREVIEW_DIMENSION;
-                        }
-                    }
-
-                    const previewCanvas = document.createElement('canvas');
-                    previewCanvas.width = previewWidth;
-                    previewCanvas.height = previewHeight;
-                    const previewCtx = previewCanvas.getContext('2d');
-                    previewCtx.drawImage(originalImage, 0, 0, previewWidth, previewHeight);
-
-                    const previewImage = new Image();
-                    previewImage.onload = () => {
-                        ui.editorContainer.classList.remove('hidden');
-                        ui.enhancementContainer.classList.add('hidden');
-                        cropper = new PerspectiveCropper(ui.canvas, ui.ctx, previewImage, originalImage);
-                        ui.rectangularModeToggle.checked = false;
-                        loader.hide();
-                    };
-                    previewImage.onerror = () => {
-                        loader.hide();
-                        alert("Error creating image preview.");
-                    };
-                    previewImage.src = previewCanvas.toDataURL();
-
-                };
-                originalImage.onerror = () => {
-                    loader.hide();
-                    alert("Error loading image file.");
-                };
-                originalImage.src = e.target.result;
+                const img = new Image();
+                img.onload = () => reinitializeCropper(img);
+                img.onerror = () => { loader.hide(); alert("Error loading image file."); };
+                img.src = e.target.result;
             };
-            reader.onerror = () => {
-                loader.hide();
-                alert("Error reading file.");
-            };
+            reader.onerror = () => { loader.hide(); alert("Error reading file."); };
             reader.readAsDataURL(file);
         }
 
@@ -1048,10 +1047,11 @@
             loader.show('Applying crop...');
 
             try {
-                const imageBitmap = await createImageBitmap(cropper.originalImage);
+                const imageSource = cropper.originalImage;
+                const imageBitmap = await createImageBitmap(imageSource);
 
-                const scaleX = cropper.originalImage.width / cropper.image.width;
-                const scaleY = cropper.originalImage.height / cropper.image.height;
+                const scaleX = imageSource.width / cropper.image.width;
+                const scaleY = imageSource.height / cropper.image.height;
 
                 const scaledHandles = cropper.handles.map(h => ({ x: h.x * scaleX, y: h.y * scaleY }));
                 const [sTl, sTr, sBr, sBl] = scaledHandles;
@@ -1060,9 +1060,7 @@
                 const destHeight = Math.round(Math.max(Math.hypot(sTr.x - sBr.x, sTr.y - sBr.y), Math.hypot(sTl.x - sBl.x, sTl.y - sBl.y)));
 
                 const corners = scaledHandles.map(h => [h.x, h.y]).flat();
-
-                if (originalCroppedCanvas) originalCroppedCanvas = null;
-
+                
                 originalCroppedCanvas = await postTaskToWorker('perspectiveTransform', {
                     imageBitmap: imageBitmap,
                     corners: corners,
@@ -1071,12 +1069,13 @@
                 });
 
                 currentEnhancedCanvas = originalCroppedCanvas;
-                currentRotation = 0;
+                currentFineRotation = 0;
                 currentCoarseRotation = 0;
                 ui.rotationSlider.value = 0;
                 ui.rotationValue.textContent = '0';
+                ui.previewImage.style.transform = '';
 
-                updatePreview(originalCroppedCanvas);
+                renderFinalPreview();
                 ui.enhancementContainer.classList.remove('hidden');
 
             } catch (error) {
@@ -1086,21 +1085,16 @@
                 loader.hide();
             }
         }
-
-        function updatePreview(canvas) {
-            if (processedCanvas) processedCanvas = null;
-            processedCanvas = canvas;
-
+        
+        function renderFinalPreview() {
+            if (!currentEnhancedCanvas) return;
+            processedCanvas = ImageProcessor.rotate(currentEnhancedCanvas, currentCoarseRotation);
+            
             const quality = parseFloat(ui.qualitySlider.value) / 100;
             const dataUrl = processedCanvas.toDataURL('image/jpeg', quality);
             ui.previewImage.src = dataUrl;
-            ui.downloadLink.href = dataUrl;
-        }
 
-        function applyRotation() {
-            if (!currentEnhancedCanvas) return;
-            const finalCanvas = ImageProcessor.rotate(currentEnhancedCanvas, currentCoarseRotation + currentRotation);
-            updatePreview(finalCanvas);
+            ui.previewImage.style.transform = `rotate(${currentFineRotation}deg)`;
         }
 
         function enhanceBAndW() {
@@ -1110,17 +1104,14 @@
             setTimeout(() => {
                 try {
                     let workingCanvas = originalCroppedCanvas;
-
                     const meanBrightness = ImageProcessor.calculateMean(workingCanvas);
                     if (meanBrightness < 120) {
                         workingCanvas = ImageProcessor.invert(workingCanvas);
                     }
                     const grayCanvas = ImageProcessor.toGrayscale(workingCanvas);
                     const blurredCanvas = ImageProcessor.bilateralFilter(grayCanvas, 9, 75, 75);
-                    const enhancedCanvas = ImageProcessor.adaptiveThreshold(blurredCanvas, 15, 8);
-                    
-                    currentEnhancedCanvas = enhancedCanvas;
-                    applyRotation();
+                    currentEnhancedCanvas = ImageProcessor.adaptiveThreshold(blurredCanvas, 15, 8);
+                    renderFinalPreview();
 
                 } catch (err) {
                     console.error("Error during enhancement: ", err);
@@ -1134,7 +1125,7 @@
         function enhanceGrayscale() {
             if (!originalCroppedCanvas) { alert("Please apply a crop first!"); return; }
             currentEnhancedCanvas = ImageProcessor.toGrayscale(originalCroppedCanvas);
-            applyRotation();
+            renderFinalPreview();
         }
 
         ui.fileInput.addEventListener('change', (e) => loadImage(e.target.files[0]));
@@ -1143,46 +1134,57 @@
             if (cropper) cropper.setRectangularMode(e.target.checked);
         });
 
+        ui.preRotateLeftButton.addEventListener('click', () => rotateEditorImage(-90));
+        ui.preRotateRightButton.addEventListener('click', () => rotateEditorImage(90));
+
         ui.enhanceButton.addEventListener('click', enhanceBAndW);
         ui.grayscaleButton.addEventListener('click', enhanceGrayscale);
         ui.originalColorButton.addEventListener('click', () => {
             if (!originalCroppedCanvas) return;
             currentEnhancedCanvas = originalCroppedCanvas;
-            applyRotation();
+            renderFinalPreview();
         });
 
         ui.rotateLeftButton.addEventListener('click', () => {
             currentCoarseRotation = (currentCoarseRotation - 90) % 360;
-            applyRotation();
+            renderFinalPreview();
         });
         ui.rotateRightButton.addEventListener('click', () => {
             currentCoarseRotation = (currentCoarseRotation + 90) % 360;
-            applyRotation();
+            renderFinalPreview();
         });
         ui.rotationSlider.addEventListener('input', (e) => {
-            currentRotation = parseInt(e.target.value, 10);
-            ui.rotationValue.textContent = currentRotation;
-            applyRotation();
+            currentFineRotation = parseInt(e.target.value, 10);
+            ui.rotationValue.textContent = currentFineRotation;
+            ui.previewImage.style.transform = `rotate(${currentFineRotation}deg)`;
         });
 
         ui.qualitySlider.addEventListener('input', (e) => {
             ui.qualityValue.textContent = e.target.value;
-            if (processedCanvas) updatePreview(processedCanvas);
         });
 
         ui.downloadLink.addEventListener('click', (e) => {
             if (!processedCanvas) {
                 e.preventDefault();
                 alert("Please process an image first.");
-            } else {
-                ui.downloadLink.download = `scanned-document-${Date.now()}.jpg`;
+                return;
             }
+            
+            const finalDownloadCanvas = ImageProcessor.rotate(processedCanvas, currentFineRotation);
+            
+            const quality = parseFloat(ui.qualitySlider.value) / 100;
+            ui.downloadLink.href = finalDownloadCanvas.toDataURL('image/jpeg', quality);
+            ui.downloadLink.download = `scanned-document-${Date.now()}.jpg`;
         });
 
         const themeToggleButton = document.getElementById('theme-toggle-button');
         themeToggleButton.addEventListener('click', () => {
             document.body.classList.toggle('dark-theme');
-            localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+            if (document.body.classList.contains('dark-theme')) {
+                localStorage.setItem('theme', 'dark');
+            } else {
+                localStorage.setItem('theme', 'light');
+            }
             themeToggleButton.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
             themeToggleButton.style.color = getComputedStyle(document.documentElement).getPropertyValue('--background-color').trim();
             themeToggleButton.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim();
@@ -1195,11 +1197,7 @@
             }
             themeToggleButton.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
             themeToggleButton.style.color = getComputedStyle(document.documentElement).getPropertyValue('--background-color').trim();
-
         });
-
-        loader.show('Initializing...');
-        setTimeout(() => loader.hide(), 100);
 
         let imageWorker;
         let workerTaskCounter = 0;
@@ -1228,20 +1226,16 @@
                 imageWorker.onerror = (error) => {
                     console.error("Worker global error:", error);
                     imageWorker = null;
-                    alert("Image processor worker encountered an error. Performance may be degraded.");
                 };
             } catch (e) {
                 console.error("Failed to initialize worker:", e);
                 imageWorker = null;
-                alert("Could not initialize image processor worker. Performance may be degraded.");
             }
-        } else {
-            console.warn("Web Workers or OffscreenCanvas not supported. Image processing will run on the main thread.");
         }
 
         async function postTaskToWorker(taskName, workerPayload) {
             if (!imageWorker) {
-                console.error("Image worker is not available.");
+                console.warn("Worker not available, running on main thread.");
                 return Promise.reject(new Error("Image worker not available."));
             }
 
@@ -1253,6 +1247,9 @@
                 imageWorker.postMessage({ id, task: taskName, ...workerPayload }, transferList);
             });
         }
+        
+        loader.show('Initializing...');
+        setTimeout(() => loader.hide(), 100);
 
     </script>
 </body>
