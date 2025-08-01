@@ -6,86 +6,210 @@
     <title>Document Scanner</title>
     <style>
         :root {
-            --primary-color: #007bff;
-            --secondary-color: #f0f4f8;
-            --text-color: #333;
-            --border-color: #ddd;
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --secondary-color: #f8fafc;
+            --accent-color: #06b6d4;
+            --text-color: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
             --background-color: #ffffff;
+            --surface-color: #ffffff;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
 
-            --dark-primary-color: #0d8eff;
-            --dark-secondary-color: #1a1a1a;
-            --dark-text-color: #e0e0e0;
-            --dark-border-color: #444;
-            --dark-background-color: #2c2c2c;
+            --dark-primary-color: #6366f1;
+            --dark-primary-hover: #5b21b6;
+            --dark-secondary-color: #0f172a;
+            --dark-accent-color: #0891b2;
+            --dark-text-color: #f1f5f9;
+            --dark-text-secondary: #94a3b8;
+            --dark-border-color: #334155;
+            --dark-background-color: #1e293b;
+            --dark-surface-color: #334155;
         }
 
         .dark-theme {
             --primary-color: var(--dark-primary-color);
+            --primary-hover: var(--dark-primary-hover);
             --secondary-color: var(--dark-secondary-color);
+            --accent-color: var(--dark-accent-color);
             --text-color: var(--dark-text-color);
+            --text-secondary: var(--dark-text-secondary);
             --border-color: var(--dark-border-color);
             --background-color: var(--dark-background-color);
+            --surface-color: var(--dark-surface-color);
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
-            background-color: var(--secondary-color);
+            background: linear-gradient(135deg, var(--secondary-color) 0%, #e0e7ff 100%);
             color: var(--text-color);
             margin: 0;
-            padding: 20px;
+            padding: 1.5rem;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: flex-start;
         }
+        
         .container {
             width: 100%;
             max-width: 900px;
-            background-color: var(--background-color);
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background-color: var(--surface-color);
+            padding: 2.5rem;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         header {
             text-align: center;
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 20px;
-            margin-bottom: 20px;
+            padding-bottom: 2rem;
+            margin-bottom: 2.5rem;
+            position: relative;
         }
+        
         header h1 {
             color: var(--primary-color);
-            margin-bottom: 0.5rem;
+            margin: 0 0 1rem 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-        #main-app h2 {
-            color: #555;
-            margin-top: 2.5rem;
-            margin-bottom: 1rem;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 0.5rem;
+        
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.125rem;
+            margin: 0;
+            font-weight: 400;
         }
-        .file-label {
-            display: inline-block;
-            padding: 12px 20px;
+        
+        .theme-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 0.75rem 1rem;
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .theme-toggle:hover {
             background-color: var(--primary-color);
             color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.3s;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
         }
-        .file-label:hover { background-color: #0056b3; }
+        #main-app h2 {
+            color: var(--text-color);
+            margin-top: 2.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+        .uploader-section {
+            margin-bottom: 2rem;
+        }
+        
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 3rem 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, var(--surface-color) 0%, var(--secondary-color) 100%);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .upload-area:hover .file-label {
+            color: white;
+            background-color: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .file-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem 2rem;
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1.125rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-md);
+            border: none;
+        }
+        
+        .file-label:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .upload-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+        }
+        
+        .upload-text {
+            margin-top: 1rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
         #file-input { display: none; }
         .canvas-wrapper, .preview-wrapper {
             position: relative;
             border: 2px dashed var(--border-color);
-            background-color: #f9f9f9;
-            padding: 5px;
+            background: linear-gradient(135deg, var(--surface-color) 0%, var(--secondary-color) 100%);
+            padding: 1rem;
             max-width: 100%;
-            margin: 0 auto;
+            margin: 1.5rem auto;
             touch-action: none;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        
+        .canvas-wrapper:hover, .preview-wrapper:hover {
+            box-shadow: var(--shadow-md);
+        }
+        
         .dark-theme .canvas-wrapper, .dark-theme .preview-wrapper {
-            background-color: #222;
+            background: linear-gradient(135deg, var(--dark-surface-color) 0%, var(--dark-secondary-color) 100%);
         }
         #canvas {
             display: block;
@@ -98,110 +222,245 @@
             max-width: 100%;
             height: auto;
             margin: 0 auto;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        #preview-image:hover {
+            transform: scale(1.02);
         }
         .controls {
-            margin-top: 20px;
-            padding: 15px;
-            background: #f9f9fa;
-            border-radius: 5px;
+            margin-top: 1.5rem;
+            padding: 1.5rem;
+            background: var(--surface-color);
+            border-radius: var(--radius-lg);
             border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        
+        .controls:hover {
+            box-shadow: var(--shadow-md);
+        }
+        
         .dark-theme .controls {
-            background: #3a3a3a;
+            background: var(--dark-surface-color);
         }
+        
         .controls h3 {
             margin-top: 0;
-            margin-bottom: 1rem;
-            color: #555;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 0.5rem;
+            margin-bottom: 1.25rem;
+            color: var(--text-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
         }
         .controls button {
-            padding: 10px 15px;
-            border: 1px solid #ccc;
-            background-color: white;
+            padding: 0.75rem 1.5rem;
+            border: 1px solid var(--border-color);
+            background-color: var(--surface-color);
             color: var(--text-color);
-            border-radius: 5px;
+            border-radius: var(--radius-md);
             cursor: pointer;
-            margin-right: 10px;
-            transition: all 0.2s;
+            margin-right: 0.75rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            font-size: 0.875rem;
+            box-shadow: var(--shadow-sm);
         }
+        
         .dark-theme .controls button {
-            background-color: #555;
-            border-color: #777;
+            background-color: var(--dark-surface-color);
+            border-color: var(--dark-border-color);
             color: var(--dark-text-color);
         }
-        .controls button:hover { background-color: #e9ecef; border-color: #aaa; }
-        .dark-theme .controls button:hover { background-color: #666; border-color: #888; }
-        .controls button:active { background-color: #dde2e6; }
-        .dark-theme .controls button:active { background-color: #444; }
-
-        .rotation-slider-container {
-            margin-top: 15px;
+        
+        .controls button:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .dark-theme .controls button:hover {
+            background-color: var(--dark-primary-color);
+            border-color: var(--dark-primary-color);
+        }
+        
+        .controls button:active {
+            transform: translateY(0);
+            box-shadow: var(--shadow-sm);
         }
 
-        .rotation-slider-container input[type="range"] {
-             width: 100%;
-             margin-top: 5px;
+        .rotation-slider-container {
+            margin-top: 1.25rem;
+        }
+
+        .rotation-slider-container input[type="range"],
+        #quality-slider {
+            width: 100%;
+            margin-top: 0.75rem;
+            height: 0.375rem;
+            border-radius: var(--radius-sm);
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .rotation-slider-container input[type="range"]::-webkit-slider-thumb,
+        #quality-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 1.25rem;
+            width: 1.25rem;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            box-shadow: var(--shadow-md);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .rotation-slider-container input[type="range"]::-webkit-slider-thumb:hover,
+        #quality-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .rotation-slider-container input[type="range"]::-moz-range-thumb,
+        #quality-slider::-moz-range-thumb {
+            height: 1.25rem;
+            width: 1.25rem;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            border: none;
+            box-shadow: var(--shadow-md);
         }
 
         .action-button {
             display: block;
             width: 100%;
-            padding: 15px;
-            margin-top: 20px;
-            font-size: 1.1em;
-            font-weight: bold;
-            background-color: #28a745;
+            padding: 1.25rem;
+            margin-top: 1.5rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #10b981, #059669);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: var(--radius-lg);
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow-md);
+            letter-spacing: -0.025em;
         }
-        .action-button:hover { background-color: #218838; }
+        
+        .action-button:hover {
+            background: linear-gradient(135deg, #059669, #047857);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .action-button:active {
+            transform: translateY(0);
+            box-shadow: var(--shadow-md);
+        }
         .download-button {
             text-decoration: none;
             text-align: center;
             box-sizing: border-box;
         }
-        #quality-slider {
-            width: 100%;
-            margin-top: 5px;
+        
+        .hidden { 
+            display: none !important; 
         }
-        .hidden { display: none !important; }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .container {
+                padding: 1.5rem;
+            }
+            
+            header h1 {
+                font-size: 2rem;
+            }
+            
+            .upload-area {
+                padding: 2rem 1rem;
+            }
+            
+            .controls {
+                padding: 1rem;
+            }
+            
+            .controls button {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 0.75rem;
+            }
+        }
+        
+        /* Smooth scrolling */
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        /* Focus styles for accessibility */
+        button:focus,
+        input:focus {
+            outline: 2px solid var(--primary-color);
+            outline-offset: 2px;
+        }
         #loader {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
             display: flex;
             justify-content: center;
             align-items: center;
             flex-direction: column;
             z-index: 1000;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        
         .dark-theme #loader {
-            background-color: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.95);
         }
+        
         .spinner {
-            border: 8px solid #f3f3f3;
-            border-top: 8px solid var(--primary-color);
+            border: 4px solid rgba(var(--primary-color), 0.2);
+            border-top: 4px solid var(--primary-color);
             border-radius: 50%;
-            width: 60px;
-            height: 60px;
+            width: 3rem;
+            height: 3rem;
             animation: spin 1s linear infinite;
         }
+        
         .dark-theme .spinner {
-            border: 8px solid #555;
+            border: 4px solid rgba(99, 102, 241, 0.2);
+            border-top: 4px solid var(--dark-primary-color);
         }
+        
         #loader p {
-            margin-top: 20px;
-            font-size: 1.2em;
+            margin-top: 1.5rem;
+            font-size: 1.125rem;
+            font-weight: 500;
             color: var(--primary-color);
+            letter-spacing: -0.025em;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -216,13 +475,23 @@
         <header>
             <h1>Advanced Document Scanner</h1>
             <p>A non-destructive, web-based tool to crop and enhance your documents.</p>
-            <button id="theme-toggle-button" style="position: absolute; top: 20px; right: 20px; padding: 8px 12px; background-color: var(--primary-color); color: var(--background-color); border: 1px solid var(--border-color); border-radius: 5px; cursor: pointer;">Toggle Theme</button>
+            <button id="theme-toggle-button" class="theme-toggle">🌙 Toggle Theme</button>
         </header>
 
         <div id="main-app">
             <div class="uploader-section">
-                <label for="file-input" class="file-label">1. Upload Image</label>
-                <input type="file" id="file-input" accept="image/*">
+                <div class="upload-area">
+                    <label for="file-input" class="file-label">
+                        <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                        </svg>
+                        Upload Image
+                    </label>
+                    <div class="upload-text">
+                        Click to select or drag and drop your image here
+                    </div>
+                    <input type="file" id="file-input" accept="image/*">
+                </div>
             </div>
 
             <div id="editor-container" class="hidden">
@@ -1249,21 +1518,18 @@
 
         const themeToggleButton = document.getElementById('theme-toggle-button');
         themeToggleButton.addEventListener('click', () => {
-            document.body.classList.toggle('dark-theme');
-            localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
-            themeToggleButton.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
-            themeToggleButton.style.color = getComputedStyle(document.documentElement).getPropertyValue('--background-color').trim();
-            themeToggleButton.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim();
+            const isDark = document.body.classList.toggle('dark-theme');
+            themeToggleButton.textContent = isDark ? '☀️ Toggle Theme' : '🌙 Toggle Theme';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
         });
 
         document.addEventListener('DOMContentLoaded', () => {
             const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark') {
+            const isDark = savedTheme === 'dark';
+            if (isDark) {
                 document.body.classList.add('dark-theme');
             }
-            themeToggleButton.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim();
-            themeToggleButton.style.color = getComputedStyle(document.documentElement).getPropertyValue('--background-color').trim();
-
+            themeToggleButton.textContent = isDark ? '☀️ Toggle Theme' : '🌙 Toggle Theme';
         });
 
 
