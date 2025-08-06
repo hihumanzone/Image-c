@@ -22,13 +22,17 @@
             --radius-md: 0.5rem;
             --radius-lg: 0.75rem;
 
+            --dark-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+            --dark-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+            --dark-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+
             --dark-primary-color: #4f46e5;
             --dark-primary-hover: #4338ca;
             --dark-secondary-color: #0a0a0a;
             --dark-accent-color: #06b6d4;
             --dark-text-color: #ffffff;
             --dark-text-secondary: #a1a1aa;
-            --dark-border-color: #27272a;
+            --dark-border-color: #4B5563;
             --dark-background-color: #0a0a0a;
             --dark-surface-color: #18181b;
         }
@@ -43,6 +47,10 @@
             --border-color: var(--dark-border-color);
             --background-color: var(--dark-background-color);
             --surface-color: var(--dark-surface-color);
+            background: var(--dark-background-color);
+            --shadow-sm: var(--dark-shadow-sm);
+            --shadow-md: var(--dark-shadow-md);
+            --shadow-lg: var(--dark-shadow-lg);
         }
 
         body {
@@ -152,8 +160,6 @@
         }
         
         .upload-area:hover {
-            border-color: var(--primary-color);
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
             transform: translateY(-2px);
             box-shadow: var(--shadow-lg);
         }
@@ -162,15 +168,6 @@
             background: linear-gradient(135deg, var(--dark-surface-color) 0%, var(--dark-secondary-color) 100%);
         }
         
-        .dark-theme .upload-area:hover {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-        }
-        
-        .upload-area:hover .file-label {
-            color: white;
-            background-color: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(10px);
-        }
         
         .file-label {
             display: inline-flex;
